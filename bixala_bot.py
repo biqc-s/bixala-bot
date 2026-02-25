@@ -11,6 +11,8 @@
 import logging
 import os
 import base64
+import csv               # لتصدير البيانات كملفات CSV
+import io                # للتعامل مع الملفات في الذاكرة
 import sqlite3           # قاعدة البيانات الداخلية — ما تحتاج تثبيت شيء
 import requests
 from datetime import datetime
@@ -36,6 +38,7 @@ IMGBB_API_KEY = os.environ["IMGBB_API_KEY"]                  # مفتاح imgBB
 BOT_PASSWORD = os.environ.get("BOT_PASSWORD", "bixala2026")  # كلمة السر الموحدة — غيّرها من Railway
 AIRTABLE_FORM_URL = os.environ.get("AIRTABLE_FORM_URL", "")  # رابط الفورم (اختياري)
 DB_PATH = os.environ.get("DB_PATH", "bixala_data.db")        # مسار قاعدة البيانات
+ADMIN_ID = int(os.environ.get("ADMIN_ID", "0"))              # رقم حسابك في تيليقرام — للأوامر الإدارية
 
 # ──────────────────────────────────────────────────────────
 # 🔢 تعريف مراحل المحادثة
@@ -611,6 +614,229 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 # ══════════════════════════════════════════════════════════
+# 🔧 دالة مساعدة — التحقق إن المستخدم هو الأدمن
+# ══════════════════════════════════════════════════════════
+def is_admin(user_id: int) -> bool:
+    """ترجع True إذا كان المستخدم هو الأدمن."""
+    return ADMIN_ID != 0 and user_id == ADMIN_ID
+
+
+# ══════════════════════════════════════════════════════════
+# 🆔 أمر /myid — يعرض رقم حسابك في تيليقرام
+# استخدمه مرة وحدة لتعرف رقمك وتضيفه كـ ADMIN_ID
+# ══════════════════════════════════════════════════════════
+async def myid_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    await update.message.reply_text(
+        f"🆔 رقم حسابك في تيليقرام:\n\n"
+        f"`{user.id}`\n\n"
+        "أضف هذا الرقم كـ ADMIN\\_ID في Railway Variables\n"
+        "لتفعيل أوامر الأدمن.",
+        parse_mode="Markdown",
+    )
+
+
+# ══════════════════════════════════════════════════════════
+# 📤 أمر /export — يصدّر كل البيانات كملفات CSV
+# 🔒 للأدمن فقط
+# ══════════════════════════════════════════════════════════
+async def export_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+
+    # التحقق من الصلاحيات
+    if not is_admin(user.id):
+        await update.message.reply_text("🚫 هذا الأمر للأدمن فقط.")
+        return
+
+    conn = sqlite3.connect(DB_PATH)
+
+    # ─── تصدير جدول المشاركين ───
+    participants_csv = io.StringIO()
+    writer = csv.writer(participants_csv)
+    writer.writerow(["الرقم", "تيليقرام_ID", "اليوزرنيم", "الاسم", "تاريخ_التسجيل"])
+    cursor = conn.execute("SELECT * FROM participants ORDER BY id")
+    writer.writerows(cursor.fetchall())
+
+    # ─── تصدير جدول القطع مع اسم المشارك ───
+    items_csv = io.StringIO()
+    writer = csv.writer(items_csv)
+    writer.writerow(["الرقم", "اسم_المشارك", "نوع_القطعة", "اسم_القطعة", "الحالة", "التاريخ"])
+    cursor = conn.execute("""
+        SELECT i.id, p.name, i.item_type, i.item_name, i.status, i.created_at
+        FROM items i
+        JOIN participants p ON i.participant_id = p.id
+        ORDER BY i.id
+    """)
+    writer.writerows(cursor.fetchall())
+
+    # ─── تصدير جدول الصور مع اسم القطعة ───
+    photos_csv = io.StringIO()
+    writer = csv.writer(photos_csv)
+    writer.writerow(["الرقم", "اسم_القطعة", "الزاوية", "الرابط", "تاريخ_الرفع"])
+    cursor = conn.execute("""
+        SELECT ph.id, i.item_name, ph.angle, ph.url, ph.uploaded_at
+        FROM photos ph
+        JOIN items i ON ph.item_id = i.id
+        ORDER BY ph.id
+    """)
+    writer.writerows(cursor.fetchall())
+
+    # ─── تصدير سجل الأحداث ───
+    log_csv = io.StringIO()
+    writer = csv.writer(log_csv)
+    writer.writerow(["الرقم", "تيليقرام_ID", "الحدث", "التفاصيل", "التوقيت"])
+    cursor = conn.execute("SELECT * FROM activity_log ORDER BY id DESC LIMIT 100")
+    writer.writerows(cursor.fetchall())
+
+    conn.close()
+
+    # ─── إرسال الملفات ───
+    await update.message.reply_text("📤 جاري تصدير البيانات...")
+
+    # ملف المشاركين
+    participants_csv.seek(0)
+    await update.message.reply_document(
+        document=participants_csv.getvalue().encode("utf-8-sig"),
+        filename=f"بكسلة_المشاركين_{datetime.now().strftime('%Y%m%d')}.csv",
+        caption="👥 جدول المشاركين"
+    )
+
+    # ملف القطع
+    items_csv.seek(0)
+    await update.message.reply_document(
+        document=items_csv.getvalue().encode("utf-8-sig"),
+        filename=f"بكسلة_القطع_{datetime.now().strftime('%Y%m%d')}.csv",
+        caption="🏺 جدول القطع"
+    )
+
+    # ملف الصور
+    photos_csv.seek(0)
+    await update.message.reply_document(
+        document=photos_csv.getvalue().encode("utf-8-sig"),
+        filename=f"بكسلة_الصور_{datetime.now().strftime('%Y%m%d')}.csv",
+        caption="📸 جدول الصور"
+    )
+
+    # ملف سجل الأحداث
+    log_csv.seek(0)
+    await update.message.reply_document(
+        document=log_csv.getvalue().encode("utf-8-sig"),
+        filename=f"بكسلة_السجل_{datetime.now().strftime('%Y%m%d')}.csv",
+        caption="📋 سجل الأحداث (آخر ١٠٠ حدث)"
+    )
+
+    await update.message.reply_text("✅ تم تصدير جميع البيانات!")
+    log_activity(user.id, "تصدير_بيانات", "تم تصدير CSV")
+
+
+# ══════════════════════════════════════════════════════════
+# 📋 أمر /participants — يعرض قائمة المشاركين
+# 🔒 للأدمن فقط
+# ══════════════════════════════════════════════════════════
+async def participants_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+
+    if not is_admin(user.id):
+        await update.message.reply_text("🚫 هذا الأمر للأدمن فقط.")
+        return
+
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.execute("""
+        SELECT p.name, p.telegram_username, COUNT(i.id) as items_count, p.created_at
+        FROM participants p
+        LEFT JOIN items i ON p.id = i.participant_id
+        GROUP BY p.id
+        ORDER BY p.id DESC
+        LIMIT 20
+    """)
+    rows = cursor.fetchall()
+    conn.close()
+
+    if not rows:
+        await update.message.reply_text("لا يوجد مشاركين بعد.")
+        return
+
+    text = "👥 *آخر ٢٠ مشارك:*\n\n"
+    for i, (name, username, items_count, created_at) in enumerate(rows, 1):
+        date_str = created_at[:10] if created_at else "—"
+        user_str = f"@{username}" if username else "—"
+        text += f"{i}. *{name}* ({user_str})\n   📦 {items_count} قطعة — 📅 {date_str}\n\n"
+
+    await update.message.reply_text(text, parse_mode="Markdown")
+
+
+# ══════════════════════════════════════════════════════════
+# 🔍 أمر /item — يعرض تفاصيل قطعة محددة برقمها
+# الاستخدام: /item 1
+# 🔒 للأدمن فقط
+# ══════════════════════════════════════════════════════════
+async def item_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+
+    if not is_admin(user.id):
+        await update.message.reply_text("🚫 هذا الأمر للأدمن فقط.")
+        return
+
+    # استخراج رقم القطعة من الأمر
+    if not context.args:
+        await update.message.reply_text("استخدم: /item [رقم]\nمثال: /item 1")
+        return
+
+    try:
+        item_id = int(context.args[0])
+    except ValueError:
+        await update.message.reply_text("❌ أرسل رقم صحيح. مثال: /item 1")
+        return
+
+    conn = sqlite3.connect(DB_PATH)
+
+    # جلب بيانات القطعة والمشارك
+    cursor = conn.execute("""
+        SELECT i.item_name, i.item_type, i.status, i.created_at,
+               p.name, p.telegram_username
+        FROM items i
+        JOIN participants p ON i.participant_id = p.id
+        WHERE i.id = ?
+    """, (item_id,))
+    item_row = cursor.fetchone()
+
+    if not item_row:
+        await update.message.reply_text(f"❌ ما لقيت قطعة برقم {item_id}")
+        conn.close()
+        return
+
+    item_name, item_type, status, created_at, p_name, p_username = item_row
+
+    # جلب صور القطعة
+    cursor = conn.execute(
+        "SELECT angle, url FROM photos WHERE item_id = ? ORDER BY id", (item_id,)
+    )
+    photos = cursor.fetchall()
+    conn.close()
+
+    # بناء الرسالة
+    photos_text = ""
+    for angle, url in photos:
+        photos_text += f"• {angle}: {url}\n"
+
+    if not photos_text:
+        photos_text = "لا توجد صور"
+
+    user_str = f"@{p_username}" if p_username else "—"
+
+    await update.message.reply_text(
+        f"🔍 *تفاصيل القطعة #{item_id}*\n\n"
+        f"🏺 الاسم: *{item_name}*\n"
+        f"📂 النوع: {item_type}\n"
+        f"📊 الحالة: {status}\n"
+        f"📅 التاريخ: {created_at[:10] if created_at else '—'}\n"
+        f"👤 المشارك: *{p_name}* ({user_str})\n\n"
+        f"📸 *الصور:*\n{photos_text}",
+        parse_mode="Markdown",
+    )
+
+
+# ══════════════════════════════════════════════════════════
 # ❌ دالة الإلغاء
 # ══════════════════════════════════════════════════════════
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -678,8 +904,14 @@ def main():
 
     app.add_handler(conv_handler)
 
-    # أمر الإحصائيات — تقدر تستخدمه في أي وقت
-    app.add_handler(CommandHandler("stats", stats_command))
+    # ─── أوامر متاحة للجميع ───
+    app.add_handler(CommandHandler("stats", stats_command))     # إحصائيات سريعة
+    app.add_handler(CommandHandler("myid", myid_command))       # معرفة رقم حسابك
+
+    # ─── أوامر الأدمن فقط ───
+    app.add_handler(CommandHandler("export", export_command))           # تصدير CSV
+    app.add_handler(CommandHandler("participants", participants_command))  # قائمة المشاركين
+    app.add_handler(CommandHandler("item", item_command))               # تفاصيل قطعة
 
     # أي رسالة خارج المحادثة تبدأ البوت تلقائيًا
     app.add_handler(MessageHandler(filters.ALL, start))
