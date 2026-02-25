@@ -1,7 +1,8 @@
 import logging
 import os
+import base64
 import requests
-from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
+from telegram import Update, ReplyKeyboardRemove
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -16,9 +17,10 @@ from telegram.ext import (
 #  يجمع صور المقتنيات من ٦ زوايا ويرفعها ويولّد روابط
 # ============================================================
 
-# إعدادات
-BOT_TOKEN = os.environ["BOT_TOKEN"]  # يُضاف في Railway فقط
-AIRTABLE_FORM_URL = os.environ.get("AIRTABLE_FORM_URL", "XXXXXX")
+# إعدادات — تُضاف كـ Variables في Railway
+BOT_TOKEN = os.environ["BOT_TOKEN"]
+IMGBB_API_KEY = os.environ["IMGBB_API_KEY"]
+AIRTABLE_FORM_URL = os.environ.get("AIRTABLE_FORM_URL", "")
 
 # مراحل المحادثة
 NAME, ITEM_NAME, PHOTO_1, PHOTO_2, PHOTO_3, PHOTO_4, PHOTO_5, PHOTO_6 = range(8)
@@ -26,37 +28,31 @@ NAME, ITEM_NAME, PHOTO_1, PHOTO_2, PHOTO_3, PHOTO_4, PHOTO_5, PHOTO_6 = range(8)
 # إعدادات الزوايا الست
 PHOTO_STEPS = [
     {
-        "step": PHOTO_1,
         "num": "١/٦",
         "angle": "من الأمام 🔲",
         "instruction": "صوّر القطعة من الأمام مباشرة.\n💡 خلّ الإضاءة واضحة والخلفية بسيطة."
     },
     {
-        "step": PHOTO_2,
         "num": "٢/٦",
         "angle": "من الخلف 🔳",
         "instruction": "أدر القطعة وصوّرها من الخلف."
     },
     {
-        "step": PHOTO_3,
         "num": "٣/٦",
         "angle": "من الجانب الأيمن ➡️",
         "instruction": "صوّرها من الجانب الأيمن."
     },
     {
-        "step": PHOTO_4,
         "num": "٤/٦",
         "angle": "من الجانب الأيسر ⬅️",
         "instruction": "صوّرها من الجانب الأيسر."
     },
     {
-        "step": PHOTO_5,
         "num": "٥/٦",
         "angle": "من الأعلى ⬆️",
         "instruction": "صوّرها من فوق (منظر علوي)."
     },
     {
-        "step": PHOTO_6,
         "num": "٦/٦",
         "angle": "تفاصيل مميزة ✨",
         "instruction": "صوّر أي نقش أو علامة أو تفصيلة مميزة على القطعة.\nإذا ما فيه، صوّرها من أي زاوية إضافية تحبها."
@@ -70,21 +66,25 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-# ─── رفع الصورة إلى Telegra.ph ───────────────────────────
-def upload_to_telegraph(file_bytes: bytes) -> str | None:
-    """يرفع صورة على Telegra.ph ويرجع الرابط الكامل."""
+# ─── رفع الصورة إلى imgBB ─────────────────────────────────
+def upload_to_imgbb(file_bytes: bytes) -> str | None:
+    """يرفع صورة على imgBB ويرجع الرابط المباشر."""
     try:
+        b64 = base64.b64encode(file_bytes).decode("utf-8")
         resp = requests.post(
-            "https://telegra.ph/upload",
-            files={"file": ("photo.jpg", file_bytes, "image/jpeg")},
+            "https://api.imgbb.com/1/upload",
+            data={
+                "key": IMGBB_API_KEY,
+                "image": b64,
+            },
             timeout=30,
         )
         if resp.status_code == 200:
             data = resp.json()
-            if isinstance(data, list) and data:
-                return "https://telegra.ph" + data[0]["src"]
+            if data.get("success"):
+                return data["data"]["url"]
     except Exception as e:
-        logger.error(f"Telegraph upload error: {e}")
+        logger.error(f"imgBB upload error: {e}")
     return None
 
 
@@ -143,7 +143,6 @@ async def get_item_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
 
 async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """معالجة كل صورة مرفوعة."""
-    # تحديد الخطوة الحالية
     current_step = len(context.user_data["photos"])
 
     # تحميل الصورة من تيليقرام
@@ -151,9 +150,9 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     file = await photo.get_file()
     file_bytes = await file.download_as_bytearray()
 
-    # رفعها على Telegraph
+    # رفعها على imgBB
     await update.message.reply_text("⏳ جاري رفع الصورة...")
-    link = upload_to_telegraph(bytes(file_bytes))
+    link = upload_to_imgbb(bytes(file_bytes))
 
     if not link:
         await update.message.reply_text(
@@ -193,7 +192,7 @@ async def finish(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     for i, p in enumerate(photos, 1):
         links_text += f"{i}. {p['angle']}\n🔗 {p['url']}\n\n"
 
-    # رابط واحد يجمع كل الروابط (نص منسق يقدر يلصقه)
+    # كل الروابط بسطر واحد لكل رابط (سهل النسخ)
     all_urls = "\n".join([p["url"] for p in photos])
 
     await update.message.reply_text(
@@ -213,7 +212,7 @@ async def finish(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     )
 
     # رابط الفورم
-    if AIRTABLE_FORM_URL != "XXXXXX":
+    if AIRTABLE_FORM_URL:
         await update.message.reply_text(
             "📝 *الخطوة الأخيرة:*\n\n"
             "الصق الروابط في نموذج المشاركة 👇\n"
