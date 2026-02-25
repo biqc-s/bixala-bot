@@ -35,10 +35,14 @@ from telegram.ext import (
 # ──────────────────────────────────────────────────────────
 BOT_TOKEN = os.environ["BOT_TOKEN"]                          # توكن البوت
 IMGBB_API_KEY = os.environ["IMGBB_API_KEY"]                  # مفتاح imgBB
-BOT_PASSWORD = os.environ.get("BOT_PASSWORD", "bixala2026")  # كلمة السر الموحدة — غيّرها من Railway
+BOT_PASSWORD = os.environ.get("BOT_PASSWORD", "")  # كلمة السر الموحدة — غيّرها من Railway
 AIRTABLE_FORM_URL = os.environ.get("AIRTABLE_FORM_URL", "")  # رابط الفورم (اختياري)
 DB_PATH = os.environ.get("DB_PATH", "bixala_data.db")        # مسار قاعدة البيانات
-ADMIN_ID = int(os.environ.get("ADMIN_ID", "0"))              # رقم حسابك في تيليقرام — للأوامر الإدارية
+ADMIN_ID = os.environ.get("ADMIN_ID", "")              # أرقام حسابات الأدمنز — افصل بينهم بفاصلة
+
+# ── تحويل أرقام الأدمنز إلى قائمة ──
+# مثال في Railway: ADMIN_ID = 123456789,987654321,555555555
+ADMIN_IDS = [int(x.strip()) for x in ADMIN_ID.split(",") if x.strip().isdigit()]
 
 # ──────────────────────────────────────────────────────────
 # 🔢 تعريف مراحل المحادثة
@@ -617,8 +621,8 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # 🔧 دالة مساعدة — التحقق إن المستخدم هو الأدمن
 # ══════════════════════════════════════════════════════════
 def is_admin(user_id: int) -> bool:
-    """ترجع True إذا كان المستخدم هو الأدمن."""
-    return ADMIN_ID != 0 and user_id == ADMIN_ID
+    """ترجع True إذا كان المستخدم من الأدمنز."""
+    return user_id in ADMIN_IDS
 
 
 # ══════════════════════════════════════════════════════════
@@ -837,6 +841,54 @@ async def item_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 # ══════════════════════════════════════════════════════════
+# ⚠️ دالة التعامل مع الإدخال الخاطئ
+# لما المشارك يرسل نص بدل صورة أو العكس
+# ══════════════════════════════════════════════════════════
+async def wrong_input_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """لما يرسل نص أو ستيكر أو أي شيء غير صورة في مرحلة التصوير."""
+    current_step = len(context.user_data.get("photos", []))
+    step = PHOTO_STEPS[current_step] if current_step < 6 else PHOTO_STEPS[5]
+
+    await update.message.reply_text(
+        f"⚠️ أحتاج *صورة* مو نص!\n\n"
+        f"📸 *الصورة {step['num']} — {step['angle']}*\n"
+        f"{step['instruction']}",
+        parse_mode="Markdown",
+    )
+    # يبقى في نفس المرحلة
+    return PHOTO_1 + current_step
+
+
+async def wrong_input_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """لما يرسل صورة بدل الاسم."""
+    await update.message.reply_text(
+        "⚠️ أحتاج *اسمك* مو صورة!\n\n"
+        "📝 *أرسل لي اسمك الكامل:*",
+        parse_mode="Markdown",
+    )
+    return NAME
+
+
+async def wrong_input_item(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """لما يرسل صورة بدل اسم القطعة."""
+    await update.message.reply_text(
+        "⚠️ أحتاج *اسم القطعة* مو صورة!\n\n"
+        "📝 *اكتب اسم القطعة التراثية:*",
+        parse_mode="Markdown",
+    )
+    return ITEM_NAME
+
+
+async def wrong_input_password(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """لما يرسل صورة بدل كلمة السر."""
+    await update.message.reply_text(
+        "⚠️ أحتاج *كلمة السر* مو صورة!\n\n"
+        "🔐 *أدخل كلمة السر للمتابعة:*",
+        parse_mode="Markdown",
+    )
+    return PASSWORD
+# ══════════════════════════════════════════════════════════
+# ══════════════════════════════════════════════════════════
 # ❌ دالة الإلغاء
 # ══════════════════════════════════════════════════════════
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -883,21 +935,60 @@ def main():
             MessageHandler(filters.PHOTO, start),
         ],
         states={
-            # مرحلة كلمة السر
-            PASSWORD: [MessageHandler(filters.TEXT & ~filters.COMMAND, check_password)],
-            # مرحلة الاسم
-            NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_name)],
+            # مرحلة كلمة السر — نص فقط، إذا أرسل صورة ينبّهه
+            PASSWORD: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, check_password),
+                MessageHandler(filters.PHOTO, wrong_input_password),
+                MessageHandler(filters.ALL & ~filters.COMMAND, wrong_input_password),
+            ],
+            # مرحلة الاسم — نص فقط
+            NAME: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, get_name),
+                MessageHandler(filters.PHOTO, wrong_input_name),
+                MessageHandler(filters.ALL & ~filters.COMMAND, wrong_input_name),
+            ],
             # مرحلة اختيار نوع القطعة
-            ITEM_TYPE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_item_type)],
+            ITEM_TYPE: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, get_item_type),
+                MessageHandler(filters.ALL & ~filters.COMMAND, wrong_input_item),
+            ],
             # مرحلة كتابة اسم القطعة يدويًا
-            ITEM_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_item_name)],
-            # مراحل الصور الست
-            PHOTO_1: [MessageHandler(filters.PHOTO, handle_photo), CommandHandler("skip", skip_photo)],
-            PHOTO_2: [MessageHandler(filters.PHOTO, handle_photo), CommandHandler("skip", skip_photo)],
-            PHOTO_3: [MessageHandler(filters.PHOTO, handle_photo), CommandHandler("skip", skip_photo)],
-            PHOTO_4: [MessageHandler(filters.PHOTO, handle_photo), CommandHandler("skip", skip_photo)],
-            PHOTO_5: [MessageHandler(filters.PHOTO, handle_photo), CommandHandler("skip", skip_photo)],
-            PHOTO_6: [MessageHandler(filters.PHOTO, handle_photo), CommandHandler("skip", skip_photo)],
+            ITEM_NAME: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, get_item_name),
+                MessageHandler(filters.PHOTO, wrong_input_item),
+                MessageHandler(filters.ALL & ~filters.COMMAND, wrong_input_item),
+            ],
+            # مراحل الصور — صورة فقط، إذا أرسل نص ينبّهه
+            PHOTO_1: [
+                MessageHandler(filters.PHOTO, handle_photo),
+                CommandHandler("skip", skip_photo),
+                MessageHandler(filters.ALL & ~filters.COMMAND, wrong_input_photo),
+            ],
+            PHOTO_2: [
+                MessageHandler(filters.PHOTO, handle_photo),
+                CommandHandler("skip", skip_photo),
+                MessageHandler(filters.ALL & ~filters.COMMAND, wrong_input_photo),
+            ],
+            PHOTO_3: [
+                MessageHandler(filters.PHOTO, handle_photo),
+                CommandHandler("skip", skip_photo),
+                MessageHandler(filters.ALL & ~filters.COMMAND, wrong_input_photo),
+            ],
+            PHOTO_4: [
+                MessageHandler(filters.PHOTO, handle_photo),
+                CommandHandler("skip", skip_photo),
+                MessageHandler(filters.ALL & ~filters.COMMAND, wrong_input_photo),
+            ],
+            PHOTO_5: [
+                MessageHandler(filters.PHOTO, handle_photo),
+                CommandHandler("skip", skip_photo),
+                MessageHandler(filters.ALL & ~filters.COMMAND, wrong_input_photo),
+            ],
+            PHOTO_6: [
+                MessageHandler(filters.PHOTO, handle_photo),
+                CommandHandler("skip", skip_photo),
+                MessageHandler(filters.ALL & ~filters.COMMAND, wrong_input_photo),
+            ],
         },
         fallbacks=[CommandHandler("cancel", cancel)],
     )
