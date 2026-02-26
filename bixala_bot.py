@@ -1,30 +1,32 @@
 # ============================================================
 #  بوت بِكسلة — Bixala Bot
-#  الوظيفة: يجمع صور المقتنيات التراثية من ٦ زوايا
-#  ويرفعها ويحفظ كل العمليات في قاعدة بيانات داخلية
-#  مع حماية بكلمة سر للمشاركين المصرّح لهم فقط
+#  الوظيفة: بوت تراثي متكامل مع وكيل ذكي (GPT)
+#  ويجمع صور المقتنيات ويحفظها في قاعدة بيانات
 # ============================================================
 
 # ──────────────────────────────────────────────────────────
-# 📦 استيراد المكتبات المطلوبة
+# 📦 استيراد المكتبات
 # ──────────────────────────────────────────────────────────
 import logging
 import os
 import base64
-import csv               # لتصدير البيانات كملفات CSV
-import io                # للتعامل مع الملفات في الذاكرة
-import sqlite3           # قاعدة البيانات الداخلية — ما تحتاج تثبيت شيء
+import csv
+import io
+import sqlite3
 import requests
 from datetime import datetime
 from telegram import (
     Update,
     ReplyKeyboardMarkup,
     ReplyKeyboardRemove,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
 )
 from telegram.ext import (
     Application,
     CommandHandler,
     MessageHandler,
+    CallbackQueryHandler,
     ConversationHandler,
     filters,
     ContextTypes,
@@ -33,36 +35,39 @@ from telegram.ext import (
 # ──────────────────────────────────────────────────────────
 # ⚙️ الإعدادات — تُضاف كـ Variables في Railway
 # ──────────────────────────────────────────────────────────
-BOT_TOKEN = os.environ["BOT_TOKEN"]                          # توكن البوت
-IMGBB_API_KEY = os.environ["IMGBB_API_KEY"]                  # مفتاح imgBB
-BOT_PASSWORD = os.environ.get("BOT_PASSWORD", "")  # كلمة السر الموحدة — غيّرها من Railway
-AIRTABLE_FORM_URL = os.environ.get("AIRTABLE_FORM_URL", "")  # رابط الفورم (اختياري)
-DB_PATH = os.environ.get("DB_PATH", "bixala_data.db")        # مسار قاعدة البيانات
-ADMIN_ID = os.environ.get("ADMIN_ID", "")              # أرقام حسابات الأدمنز — افصل بينهم بفاصلة
+BOT_TOKEN = os.environ["BOT_TOKEN"]
+IMGBB_API_KEY = os.environ["IMGBB_API_KEY"]
+BOT_PASSWORD = os.environ.get("BOT_PASSWORD", "")
+OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]                 # توكن OpenAI
+OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")  # النموذج — غيّره حسب اشتراكك
+AIRTABLE_FORM_URL = os.environ.get("AIRTABLE_FORM_URL", "")
+DB_PATH = os.environ.get("DB_PATH", "bixala_data.db")
+ADMIN_ID = os.environ.get("ADMIN_ID", "")
+SUPPORT_USERNAME = os.environ.get("SUPPORT_USERNAME", "")      # يوزرنيم الدعم الفني مثل: @bixala_support
 
-# ── تحويل أرقام الأدمنز إلى قائمة ──
-# مثال في Railway: ADMIN_ID = 123456789,987654321,555555555
+# ── قائمة الأدمنز ──
 ADMIN_IDS = [int(x.strip()) for x in ADMIN_ID.split(",") if x.strip().isdigit()]
 
 # ──────────────────────────────────────────────────────────
-# 🔢 تعريف مراحل المحادثة
+# 🔢 مراحل المحادثة
 # ──────────────────────────────────────────────────────────
 (
-    PASSWORD,       # 0 — إدخال كلمة السر
-    NAME,           # 1 — كتابة الاسم
-    ITEM_TYPE,      # 2 — اختيار نوع القطعة
-    ITEM_NAME,      # 3 — كتابة اسم القطعة (إذا اختار "أخرى")
-    PHOTO_1,        # 4 — صورة من الأمام
-    PHOTO_2,        # 5 — صورة من الخلف
-    PHOTO_3,        # 6 — صورة من الجانب الأيمن
-    PHOTO_4,        # 7 — صورة من الجانب الأيسر
-    PHOTO_5,        # 8 — صورة من الأعلى
-    PHOTO_6,        # 9 — صورة تفاصيل مميزة
-) = range(10)
+    PASSWORD,       # 0 — كلمة السر
+    MAIN_MENU,      # 1 — القائمة الرئيسية
+    AI_CHAT,        # 2 — المحادثة مع الوكيل الذكي
+    ITEM_TYPE,      # 3 — اختيار نوع القطعة
+    ITEM_NAME,      # 4 — كتابة اسم القطعة
+    NAME,           # 5 — كتابة اسم المشارك
+    PHOTO_1,        # 6
+    PHOTO_2,        # 7
+    PHOTO_3,        # 8
+    PHOTO_4,        # 9
+    PHOTO_5,        # 10
+    PHOTO_6,        # 11
+) = range(12)
 
 # ──────────────────────────────────────────────────────────
-# 🏺 أنواع القطع — تظهر كأزرار
-# 💡 عدّل هنا إذا تبي تضيف أو تحذف أنواع
+# 🏺 أنواع القطع
 # ──────────────────────────────────────────────────────────
 ITEM_TYPES = [
     ["دلة قهوة ☕", "مبخرة 🪔"],
@@ -73,456 +78,459 @@ ITEM_TYPES = [
 ]
 
 # ──────────────────────────────────────────────────────────
-# 📸 إعدادات الزوايا الست
+# 📸 الزوايا الست
 # ──────────────────────────────────────────────────────────
 PHOTO_STEPS = [
-    {
-        "num": "١/٦",
-        "angle": "من الأمام 🔲",
-        "instruction": "صوّر القطعة من الأمام مباشرة.\n💡 خلّ الإضاءة واضحة والخلفية بسيطة."
-    },
-    {
-        "num": "٢/٦",
-        "angle": "من الخلف 🔳",
-        "instruction": "أدر القطعة وصوّرها من الخلف."
-    },
-    {
-        "num": "٣/٦",
-        "angle": "من الجانب الأيمن ➡️",
-        "instruction": "صوّرها من الجانب الأيمن."
-    },
-    {
-        "num": "٤/٦",
-        "angle": "من الجانب الأيسر ⬅️",
-        "instruction": "صوّرها من الجانب الأيسر."
-    },
-    {
-        "num": "٥/٦",
-        "angle": "من الأعلى ⬆️",
-        "instruction": "صوّرها من فوق (منظر علوي)."
-    },
-    {
-        "num": "٦/٦",
-        "angle": "تفاصيل مميزة ✨",
-        "instruction": "صوّر أي نقش أو علامة أو تفصيلة مميزة على القطعة.\nإذا ما فيه، صوّرها من أي زاوية إضافية تحبها."
-    },
+    {"num": "١/٦", "angle": "من الأمام 🔲", "instruction": "صوّر القطعة من الأمام مباشرة.\n💡 خلّ الإضاءة واضحة والخلفية بسيطة."},
+    {"num": "٢/٦", "angle": "من الخلف 🔳", "instruction": "أدر القطعة وصوّرها من الخلف."},
+    {"num": "٣/٦", "angle": "من الجانب الأيمن ➡️", "instruction": "صوّرها من الجانب الأيمن."},
+    {"num": "٤/٦", "angle": "من الجانب الأيسر ⬅️", "instruction": "صوّرها من الجانب الأيسر."},
+    {"num": "٥/٦", "angle": "من الأعلى ⬆️", "instruction": "صوّرها من فوق (منظر علوي)."},
+    {"num": "٦/٦", "angle": "تفاصيل مميزة ✨", "instruction": "صوّر أي نقش أو علامة مميزة على القطعة.\nإذا ما فيه، صوّرها من أي زاوية إضافية."},
 ]
 
 # ──────────────────────────────────────────────────────────
-# 📋 نظام تسجيل الأحداث
+# 🤖 رسالة النظام للوكيل الذكي — شخصيته وتعليماته
+# 💡 عدّل هنا لتغيير شخصية وسلوك الوكيل
 # ──────────────────────────────────────────────────────────
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    level=logging.INFO,
-)
+AI_SYSTEM_PROMPT = """أنت "بِكسل" 🤖 الوكيل الذكي لمشروع بِكسلة.
+
+بِكسلة مشروع سعودي يحفظ الإرث العائلي رقميًا عن طريق:
+١. جمع المقتنيات التراثية من العائلات (دلال قهوة، سجاجيد، خناجر، مباخر، إلخ)
+٢. تصويرها من ٦ زوايا مختلفة
+٣. تحويلها إلى نماذج ثلاثية الأبعاد (3D)
+٤. إنشاء عدسات سناب شات تفاعلية لكل قطعة مع تسجيل صوتي لقصتها
+٥. إصدار شهادة رقمية لكل قطعة برقم مميز (Digital ID) يشبه مفهوم NFT
+٦. الهدف المستقبلي: صنع ألعاب تحتوي على هذه القطع وقصصها لربط الأجيال
+
+اسم المشروع "بِكسلة" مشتق من كلمتين: "بكسل" (تقنية) + "أصالة" (تراث).
+
+أنت ودود، متحمس للتراث، وتجاوب باختصار ووضوح بالعربي.
+إذا سألوك عن كيفية المشاركة، وجّههم لاختيار "تسجيل قطعة" من القائمة الرئيسية.
+لا تجاوب على أسئلة خارج نطاق المشروع والتراث."""
+
+logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
 # ══════════════════════════════════════════════════════════
-# 🗄️ قاعدة البيانات الداخلية (SQLite)
-# تحفظ كل العمليات: المشاركين، القطع، الصور، سجل الأحداث
+# 🗄️ قاعدة البيانات
 # ══════════════════════════════════════════════════════════
-
 def init_database():
-    """
-    تُنشئ جداول قاعدة البيانات إذا ما كانت موجودة.
-    تُستدعى مرة وحدة عند تشغيل البوت.
-    """
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-
-    # ─── جدول المشاركين ───
-    # يحفظ بيانات كل مشارك استخدم البوت
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS participants (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,   -- رقم تسلسلي تلقائي
-            telegram_id INTEGER,                     -- رقم حساب التيليقرام
-            telegram_username TEXT,                   -- يوزرنيم التيليقرام
-            name TEXT,                                -- الاسم اللي كتبه المشارك
-            created_at TEXT                           -- تاريخ ووقت التسجيل
-        )
-    """)
-
-    # ─── جدول القطع ───
-    # يحفظ بيانات كل قطعة تم تصويرها
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS items (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,   -- رقم تسلسلي تلقائي
-            participant_id INTEGER,                  -- رقم المشارك (يربطها بجدول المشاركين)
-            item_type TEXT,                          -- نوع القطعة (دلة، سجادة، إلخ)
-            item_name TEXT,                          -- اسم القطعة
-            status TEXT DEFAULT 'مكتمل',             -- حالة القطعة
-            created_at TEXT,                         -- تاريخ ووقت الإضافة
-            FOREIGN KEY (participant_id) REFERENCES participants(id)
-        )
-    """)
-
-    # ─── جدول الصور ───
-    # يحفظ رابط كل صورة والزاوية حقتها
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS photos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,   -- رقم تسلسلي
-            item_id INTEGER,                         -- رقم القطعة (يربطها بجدول القطع)
-            angle TEXT,                              -- الزاوية (أمام، خلف، إلخ)
-            url TEXT,                                -- رابط الصورة على imgBB
-            uploaded_at TEXT,                         -- تاريخ ووقت الرفع
-            FOREIGN KEY (item_id) REFERENCES items(id)
-        )
-    """)
-
-    # ─── جدول سجل الأحداث ───
-    # يحفظ كل حدث يصير في البوت (دخول، خروج، أخطاء، إلخ)
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS activity_log (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            telegram_id INTEGER,                     -- مين سوّى الحدث
-            action TEXT,                             -- نوع الحدث
-            details TEXT,                            -- تفاصيل إضافية
-            timestamp TEXT                           -- التوقيت
-        )
-    """)
-
-    conn.commit()
-    conn.close()
-    logger.info("🗄️ قاعدة البيانات جاهزة")
-
-
-def log_activity(telegram_id: int, action: str, details: str = ""):
-    """
-    تسجّل أي حدث في سجل الأحداث.
-    أمثلة: "دخول البوت"، "إدخال كلمة سر خاطئة"، "رفع صورة"، إلخ
-    """
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute(
-        "INSERT INTO activity_log (telegram_id, action, details, timestamp) VALUES (?, ?, ?, ?)",
-        (telegram_id, action, details, datetime.now().isoformat())
-    )
+    c.execute("""CREATE TABLE IF NOT EXISTS participants (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, telegram_id INTEGER,
+        telegram_username TEXT, name TEXT, created_at TEXT)""")
+    c.execute("""CREATE TABLE IF NOT EXISTS items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, participant_id INTEGER,
+        item_type TEXT, item_name TEXT, status TEXT DEFAULT 'مكتمل',
+        created_at TEXT, FOREIGN KEY (participant_id) REFERENCES participants(id))""")
+    c.execute("""CREATE TABLE IF NOT EXISTS photos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, item_id INTEGER,
+        angle TEXT, url TEXT, uploaded_at TEXT,
+        FOREIGN KEY (item_id) REFERENCES items(id))""")
+    c.execute("""CREATE TABLE IF NOT EXISTS activity_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, telegram_id INTEGER,
+        action TEXT, details TEXT, timestamp TEXT)""")
     conn.commit()
     conn.close()
 
 
-def save_participant(telegram_id: int, username: str, name: str) -> int:
-    """
-    تحفظ بيانات المشارك وترجع رقمه في قاعدة البيانات.
-    """
+def log_activity(telegram_id, action, details=""):
     conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute(
-        "INSERT INTO participants (telegram_id, telegram_username, name, created_at) VALUES (?, ?, ?, ?)",
-        (telegram_id, username or "", name, datetime.now().isoformat())
-    )
-    participant_id = c.lastrowid  # رقم المشارك اللي انحفظ
-    conn.commit()
-    conn.close()
-    return participant_id
-
-
-def save_item(participant_id: int, item_type: str, item_name: str) -> int:
-    """
-    تحفظ بيانات القطعة وترجع رقمها.
-    """
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute(
-        "INSERT INTO items (participant_id, item_type, item_name, status, created_at) VALUES (?, ?, ?, ?, ?)",
-        (participant_id, item_type, item_name, "مكتمل", datetime.now().isoformat())
-    )
-    item_id = c.lastrowid
-    conn.commit()
-    conn.close()
-    return item_id
-
-
-def save_photo(item_id: int, angle: str, url: str):
-    """
-    تحفظ رابط صورة مع الزاوية حقتها.
-    """
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute(
-        "INSERT INTO photos (item_id, angle, url, uploaded_at) VALUES (?, ?, ?, ?)",
-        (item_id, angle, url, datetime.now().isoformat())
-    )
+    conn.execute("INSERT INTO activity_log (telegram_id, action, details, timestamp) VALUES (?,?,?,?)",
+                 (telegram_id, action, details, datetime.now().isoformat()))
     conn.commit()
     conn.close()
 
 
-def get_stats() -> dict:
-    """
-    تجيب إحصائيات سريعة من قاعدة البيانات.
-    تُستخدم في أمر /stats
-    """
+def save_participant(telegram_id, username, name):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
+    c.execute("INSERT INTO participants (telegram_id, telegram_username, name, created_at) VALUES (?,?,?,?)",
+              (telegram_id, username or "", name, datetime.now().isoformat()))
+    pid = c.lastrowid
+    conn.commit()
+    conn.close()
+    return pid
 
-    # عدد المشاركين
+
+def save_item(participant_id, item_type, item_name):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("INSERT INTO items (participant_id, item_type, item_name, status, created_at) VALUES (?,?,?,?,?)",
+              (participant_id, item_type, item_name, "مكتمل", datetime.now().isoformat()))
+    iid = c.lastrowid
+    conn.commit()
+    conn.close()
+    return iid
+
+
+def save_photo(item_id, angle, url):
+    conn = sqlite3.connect(DB_PATH)
+    conn.execute("INSERT INTO photos (item_id, angle, url, uploaded_at) VALUES (?,?,?,?)",
+                 (item_id, angle, url, datetime.now().isoformat()))
+    conn.commit()
+    conn.close()
+
+
+def get_stats():
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
     c.execute("SELECT COUNT(*) FROM participants")
-    total_participants = c.fetchone()[0]
-
-    # عدد القطع
+    tp = c.fetchone()[0]
     c.execute("SELECT COUNT(*) FROM items")
-    total_items = c.fetchone()[0]
-
-    # عدد الصور
+    ti = c.fetchone()[0]
     c.execute("SELECT COUNT(*) FROM photos")
-    total_photos = c.fetchone()[0]
-
-    # أكثر نوع قطعة شيوعًا
+    tph = c.fetchone()[0]
     c.execute("SELECT item_type, COUNT(*) as cnt FROM items GROUP BY item_type ORDER BY cnt DESC LIMIT 1")
-    top_type_row = c.fetchone()
-    top_type = top_type_row[0] if top_type_row else "—"
-
-    # عدد محاولات الدخول الفاشلة
+    r = c.fetchone()
+    tt = r[0] if r else "—"
     c.execute("SELECT COUNT(*) FROM activity_log WHERE action = 'كلمة_سر_خاطئة'")
-    failed_attempts = c.fetchone()[0]
-
-    # آخر ٥ أحداث
+    fa = c.fetchone()[0]
     c.execute("SELECT action, details, timestamp FROM activity_log ORDER BY id DESC LIMIT 5")
-    recent_activity = c.fetchall()
-
+    ra = c.fetchall()
     conn.close()
+    return {"total_participants": tp, "total_items": ti, "total_photos": tph,
+            "top_type": tt, "failed_attempts": fa, "recent_activity": ra}
 
-    return {
-        "total_participants": total_participants,
-        "total_items": total_items,
-        "total_photos": total_photos,
-        "top_type": top_type,
-        "failed_attempts": failed_attempts,
-        "recent_activity": recent_activity,
-    }
+
+def is_admin(user_id):
+    return user_id in ADMIN_IDS
 
 
 # ══════════════════════════════════════════════════════════
-# 🖼️ دالة رفع الصور على imgBB
+# 🖼️ رفع الصور على imgBB
 # ══════════════════════════════════════════════════════════
-def upload_to_imgbb(file_bytes: bytes) -> str | None:
-    """يرفع صورة على imgBB ويرجع الرابط المباشر."""
+def upload_to_imgbb(file_bytes):
     try:
         b64 = base64.b64encode(file_bytes).decode("utf-8")
-        resp = requests.post(
-            "https://api.imgbb.com/1/upload",
-            data={"key": IMGBB_API_KEY, "image": b64},
-            timeout=30,
-        )
+        resp = requests.post("https://api.imgbb.com/1/upload",
+                             data={"key": IMGBB_API_KEY, "image": b64}, timeout=30)
         if resp.status_code == 200:
             data = resp.json()
             if data.get("success"):
                 return data["data"]["url"]
     except Exception as e:
-        logger.error(f"imgBB upload error: {e}")
+        logger.error(f"imgBB error: {e}")
     return None
 
 
 # ══════════════════════════════════════════════════════════
-# 🔧 دالة مساعدة — تطلب الصورة الأولى
+# 🤖 دالة الوكيل الذكي — إرسال رسالة إلى OpenAI GPT
 # ══════════════════════════════════════════════════════════
-async def ask_first_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    item = context.user_data["item_name"]
-    step = PHOTO_STEPS[0]
+def ask_gpt(user_message: str, chat_history: list) -> str:
+    """
+    ترسل رسالة المستخدم + سجل المحادثة إلى GPT وترجع الرد.
+    chat_history: قائمة بالرسائل السابقة [{role, content}, ...]
+    """
+    try:
+        # بناء الرسائل: رسالة النظام + سجل المحادثة + الرسالة الجديدة
+        messages = [{"role": "system", "content": AI_SYSTEM_PROMPT}]
+        messages.extend(chat_history)
+        messages.append({"role": "user", "content": user_message})
 
-    await update.message.reply_text(
-        f"ممتاز! بنصوّر *{item}* من ٦ زوايا 📷\n\n"
-        "─────────────────\n"
-        "💡 *نصائح سريعة للتصوير:*\n"
-        "• استخدم إضاءة طبيعية أو واضحة\n"
-        "• خلّ الخلفية بسيطة (أبيض أو لون واحد)\n"
-        "• لا تستخدم فلاش\n"
-        "• تأكد القطعة واضحة وكاملة في الصورة\n"
-        "─────────────────\n\n"
-        f"📸 *الصورة {step['num']} — {step['angle']}*\n"
-        f"{step['instruction']}",
+        resp = requests.post(
+            "https://api.openai.com/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {OPENAI_API_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": OPENAI_MODEL,
+                "messages": messages,
+                "max_tokens": 500,         # الحد الأقصى للرد
+                "temperature": 0.7,        # درجة الإبداعية
+            },
+            timeout=30,
+        )
+
+        if resp.status_code == 200:
+            data = resp.json()
+            return data["choices"][0]["message"]["content"]
+        else:
+            logger.error(f"OpenAI error {resp.status_code}: {resp.text}")
+            return "عذرًا، حصل خطأ تقني. حاول مرة ثانية 🙏"
+
+    except Exception as e:
+        logger.error(f"OpenAI exception: {e}")
+        return "عذرًا، حصل خطأ في الاتصال. حاول مرة ثانية 🙏"
+
+
+# ══════════════════════════════════════════════════════════
+# 🔧 دالة عرض القائمة الرئيسية
+# ══════════════════════════════════════════════════════════
+def main_menu_keyboard():
+    """ترجع أزرار القائمة الرئيسية (Inline Keyboard)."""
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🤖 اعرف أكثر عن بِكسلة", callback_data="ai_chat")],
+        [InlineKeyboardButton("📸 تسجيل قطعة تراثية", callback_data="register_item")],
+        [InlineKeyboardButton("📞 التواصل مع الدعم الفني", callback_data="support")],
+        [InlineKeyboardButton("❌ إلغاء", callback_data="cancel")],
+    ])
+
+
+async def show_main_menu(message, name=""):
+    """ترسل القائمة الرئيسية."""
+    greeting = f"أهلاً *{name}*! " if name else ""
+    await message.reply_text(
+        f"✨ {greeting}مرحبًا بك في *بِكسلة*\n\n"
+        "🏺 نحفظ الإرث العائلي رقميًا\n\n"
+        "اختر من القائمة:",
         parse_mode="Markdown",
-        reply_markup=ReplyKeyboardRemove(),
+        reply_markup=main_menu_keyboard(),
     )
-    return PHOTO_1
 
 
 # ══════════════════════════════════════════════════════════
-# 🟢 دالة البداية — ترحيب + طلب كلمة السر
+# 🟢 البداية — ترحيب + القائمة مباشرة بدون كلمة سر
 # ══════════════════════════════════════════════════════════
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data.clear()
     context.user_data["photos"] = []
+    context.user_data["ai_history"] = []
 
-    # تسجيل الدخول في سجل الأحداث
     user = update.effective_user
     log_activity(user.id, "بداية_محادثة", f"@{user.username or 'بدون_يوزر'}")
 
-    await update.message.reply_text(
-        "✨ *أهلاً بك في بِكسلة!*\n\n"
-        "نحن نحفظ الإرث العائلي رقميًا 🏺\n\n"
-        "🔐 *أدخل كلمة السر للمتابعة:*",
-        parse_mode="Markdown",
-        reply_markup=ReplyKeyboardRemove(),
-    )
-    # الانتقال لمرحلة كلمة السر
-    return PASSWORD
+    await show_main_menu(update.message)
+    return MAIN_MENU
 
 
 # ══════════════════════════════════════════════════════════
-# 🔐 دالة التحقق من كلمة السر
-# إذا صحيحة ← يكمل، إذا خاطئة ← يطلب مرة ثانية
+# 🔐 التحقق من كلمة السر
 # ══════════════════════════════════════════════════════════
 async def check_password(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user = update.effective_user
     entered = update.message.text.strip()
 
-    # ─── كلمة السر صحيحة ───
     if entered == BOT_PASSWORD:
         log_activity(user.id, "كلمة_سر_صحيحة")
-
         await update.message.reply_text(
-            "✅ تم التحقق بنجاح!\n\n"
-            "📝 *أرسل لي اسمك الكامل:*",
+            "✅ تم التحقق بنجاح!\n\n📝 *أرسل لي اسمك الكامل:*",
             parse_mode="Markdown",
         )
         return NAME
 
-    # ─── كلمة السر خاطئة ───
     log_activity(user.id, "كلمة_سر_خاطئة", f"أدخل: {entered}")
-
-    # نحسب عدد المحاولات
     context.user_data["attempts"] = context.user_data.get("attempts", 0) + 1
 
-    # إذا حاول ٣ مرات — أنهِ المحادثة
     if context.user_data["attempts"] >= 3:
         log_activity(user.id, "تم_الحظر", "٣ محاولات فاشلة")
-        await update.message.reply_text(
-            "🚫 تم تجاوز عدد المحاولات المسموحة.\n"
-            "تواصل مع فريق بِكسلة للحصول على كلمة السر."
-        )
-        return ConversationHandler.END
+        await update.message.reply_text("🚫 تم تجاوز عدد المحاولات.\nتواصل مع فريق بِكسلة للحصول على كلمة السر.")
+        await show_main_menu(update.message)
+        return MAIN_MENU
 
     remaining = 3 - context.user_data["attempts"]
     await update.message.reply_text(
-        f"❌ كلمة السر غير صحيحة.\n"
-        f"متبقي لك *{remaining}* محاولات.\n\n"
-        "🔐 *أدخل كلمة السر:*",
+        f"❌ كلمة السر غير صحيحة.\nمتبقي *{remaining}* محاولات.\n\n🔐 *أدخل كلمة السر:*",
         parse_mode="Markdown",
     )
     return PASSWORD
 
 
 # ══════════════════════════════════════════════════════════
-# 👤 دالة استقبال الاسم
+# 📋 معالجة أزرار القائمة الرئيسية
+# ══════════════════════════════════════════════════════════
+async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    query = update.callback_query
+    await query.answer()  # إزالة علامة التحميل من الزر
+    user = update.effective_user
+    choice = query.data
+
+    # ─── 🤖 الوكيل الذكي ───
+    if choice == "ai_chat":
+        log_activity(user.id, "فتح_وكيل_ذكي")
+        context.user_data["ai_history"] = []
+        await query.message.reply_text(
+            "🤖 *أهلاً! أنا بِكسل، وكيلك الذكي*\n\n"
+            "اسألني أي شيء عن مشروع بِكسلة وعن التراث!\n\n"
+            "💡 أمثلة:\n"
+            "• وش هو مشروع بِكسلة؟\n"
+            "• كيف أشارك بقطعتي؟\n"
+            "• وش يصير لقطعتي بعد التسجيل؟\n\n"
+            "📋 للرجوع للقائمة أرسل: /menu",
+            parse_mode="Markdown",
+        )
+        return AI_CHAT
+
+    # ─── 📸 تسجيل قطعة — يطلب كلمة السر أولاً ───
+    elif choice == "register_item":
+        log_activity(user.id, "بدء_تسجيل_قطعة")
+        context.user_data["attempts"] = 0
+        await query.message.reply_text(
+            "🔐 *أدخل كلمة السر للمتابعة:*",
+            parse_mode="Markdown",
+        )
+        return PASSWORD
+
+    # ─── 📞 الدعم الفني ───
+    elif choice == "support":
+        log_activity(user.id, "طلب_دعم_فني")
+        if SUPPORT_USERNAME:
+            support_text = f"تواصل مع فريق الدعم مباشرة: {SUPPORT_USERNAME}"
+        else:
+            support_text = "أرسل استفسارك هنا وسيتواصل معك فريقنا في أقرب وقت."
+        await query.message.reply_text(
+            f"📞 *الدعم الفني*\n\n{support_text}\n\n📋 للرجوع للقائمة أرسل: /menu",
+            parse_mode="Markdown",
+        )
+        return MAIN_MENU
+
+    # ─── ❌ إلغاء ───
+    elif choice == "cancel":
+        log_activity(user.id, "إلغاء_من_القائمة")
+        await query.message.reply_text(
+            "شكرًا لزيارتك بِكسلة! 🙏✨\nتقدر ترجع بإرسال أي رسالة.",
+        )
+        return ConversationHandler.END
+
+    return MAIN_MENU
+
+
+# ══════════════════════════════════════════════════════════
+# 🤖 محادثة الوكيل الذكي
+# ══════════════════════════════════════════════════════════
+async def ai_chat_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    user = update.effective_user
+    user_message = update.message.text.strip()
+
+    log_activity(user.id, "رسالة_وكيل_ذكي", user_message[:50])
+
+    # إرسال مؤشر "يكتب..."
+    await update.message.chat.send_action("typing")
+
+    # جلب سجل المحادثة السابق
+    history = context.user_data.get("ai_history", [])
+
+    # إرسال الرسالة إلى GPT
+    reply = ask_gpt(user_message, history)
+
+    # حفظ الرسالة والرد في سجل المحادثة (نحتفظ بآخر ١٠ رسائل فقط)
+    history.append({"role": "user", "content": user_message})
+    history.append({"role": "assistant", "content": reply})
+    context.user_data["ai_history"] = history[-10:]  # آخر ١٠ رسائل فقط لتوفير التوكنز
+
+    await update.message.reply_text(
+        f"🤖 {reply}\n\n_📋 للرجوع للقائمة أرسل /menu_",
+        parse_mode="Markdown",
+    )
+    return AI_CHAT
+
+
+# ══════════════════════════════════════════════════════════
+# /menu — الرجوع للقائمة الرئيسية من أي مكان
+# ══════════════════════════════════════════════════════════
+async def menu_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    await show_main_menu(update.message)
+    return MAIN_MENU
+
+
+# ══════════════════════════════════════════════════════════
+# 👤 استقبال الاسم
 # ══════════════════════════════════════════════════════════
 async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user = update.effective_user
     context.user_data["name"] = update.message.text.strip()
     name = context.user_data["name"]
-
-    # حفظ المشارك في قاعدة البيانات
     participant_id = save_participant(user.id, user.username, name)
     context.user_data["participant_id"] = participant_id
-
     log_activity(user.id, "تسجيل_اسم", name)
 
-    # عرض أزرار أنواع القطع
     await update.message.reply_text(
-        f"أهلاً *{name}!* 👋\n\n"
-        "🏺 *اختر نوع القطعة التراثية:*",
+        f"أهلاً *{name}!* 👋\n\n🏺 *اختر نوع القطعة التراثية:*",
         parse_mode="Markdown",
-        reply_markup=ReplyKeyboardMarkup(
-            ITEM_TYPES,
-            one_time_keyboard=True,
-            resize_keyboard=True,
-            input_field_placeholder="اختر نوع القطعة..."
-        ),
+        reply_markup=ReplyKeyboardMarkup(ITEM_TYPES, one_time_keyboard=True,
+                                         resize_keyboard=True, input_field_placeholder="اختر نوع القطعة..."),
     )
     return ITEM_TYPE
 
 
 # ══════════════════════════════════════════════════════════
-# 🏺 دالة استقبال نوع القطعة — من الأزرار
+# 🏺 اختيار نوع القطعة
 # ══════════════════════════════════════════════════════════
 async def get_item_type(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     chosen = update.message.text.strip()
     user = update.effective_user
 
-    # إذا اختار "أخرى"
     if "أخرى" in chosen:
         await update.message.reply_text(
-            "📝 *اكتب اسم القطعة التراثية:*\n"
-            "مثال: مفتاح قديم، صندوق خشبي، مرآة نحاسية...",
-            parse_mode="Markdown",
-            reply_markup=ReplyKeyboardRemove(),
+            "📝 *اكتب اسم القطعة التراثية:*\nمثال: مفتاح قديم، صندوق خشبي...",
+            parse_mode="Markdown", reply_markup=ReplyKeyboardRemove(),
         )
         return ITEM_NAME
 
-    # حفظ نوع القطعة (بدون الإيموجي)
     parts = chosen.rsplit(" ", 1)
     item_name = parts[0] if len(parts) > 1 else chosen
     context.user_data["item_type"] = item_name
     context.user_data["item_name"] = item_name
-
     log_activity(user.id, "اختيار_قطعة", item_name)
-
     return await ask_first_photo(update, context)
 
 
-# ══════════════════════════════════════════════════════════
-# ✏️ دالة استقبال اسم القطعة يدويًا (إذا اختار "أخرى")
-# ══════════════════════════════════════════════════════════
 async def get_item_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user = update.effective_user
     item_name = update.message.text.strip()
     context.user_data["item_type"] = "أخرى"
     context.user_data["item_name"] = item_name
-
     log_activity(user.id, "اختيار_قطعة_يدوي", item_name)
-
     return await ask_first_photo(update, context)
 
 
 # ══════════════════════════════════════════════════════════
-# 📷 دالة معالجة الصور
+# 📷 التصوير
 # ══════════════════════════════════════════════════════════
+async def ask_first_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    item = context.user_data["item_name"]
+    step = PHOTO_STEPS[0]
+    await update.message.reply_text(
+        f"ممتاز! بنصوّر *{item}* من ٦ زوايا 📷\n\n"
+        "─────────────────\n"
+        "💡 *نصائح سريعة للتصوير:*\n"
+        "• استخدم إضاءة طبيعية أو واضحة\n"
+        "• خلّ الخلفية بسيطة\n"
+        "• لا تستخدم فلاش\n"
+        "• تأكد القطعة واضحة وكاملة\n"
+        "─────────────────\n\n"
+        f"📸 *الصورة {step['num']} — {step['angle']}*\n{step['instruction']}",
+        parse_mode="Markdown", reply_markup=ReplyKeyboardRemove(),
+    )
+    return PHOTO_1
+
+
 async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user = update.effective_user
     current_step = len(context.user_data["photos"])
-
-    # تحميل الصورة من تيليقرام
     photo = update.message.photo[-1]
     file = await photo.get_file()
     file_bytes = await file.download_as_bytearray()
 
-    # رفعها على imgBB
     await update.message.reply_text("⏳ جاري رفع الصورة...")
     link = upload_to_imgbb(bytes(file_bytes))
 
     if not link:
-        log_activity(user.id, "خطأ_رفع_صورة", f"الزاوية: {PHOTO_STEPS[current_step]['angle']}")
-        await update.message.reply_text(
-            "❌ حصل خطأ في الرفع. أرسل الصورة مرة ثانية."
-        )
+        log_activity(user.id, "خطأ_رفع", PHOTO_STEPS[current_step]["angle"])
+        await update.message.reply_text("❌ حصل خطأ. أرسل الصورة مرة ثانية.")
         return PHOTO_1 + current_step
 
-    # حفظ الرابط
-    context.user_data["photos"].append(
-        {"angle": PHOTO_STEPS[current_step]["angle"], "url": link}
-    )
+    context.user_data["photos"].append({"angle": PHOTO_STEPS[current_step]["angle"], "url": link})
+    log_activity(user.id, "رفع_صورة", f"{current_step+1}/٦")
+    await update.message.reply_text(f"✅ تم رفع الصورة {current_step+1}/٦")
 
-    log_activity(user.id, "رفع_صورة", f"{current_step + 1}/٦ — {PHOTO_STEPS[current_step]['angle']}")
-
-    await update.message.reply_text(f"✅ تم رفع الصورة {current_step + 1}/٦")
-
-    # هل كملنا ٦ صور؟
     if current_step + 1 >= 6:
         return await finish(update, context)
 
-    # طلب الصورة التالية
-    next_step = PHOTO_STEPS[current_step + 1]
+    ns = PHOTO_STEPS[current_step + 1]
     await update.message.reply_text(
-        f"📸 *الصورة {next_step['num']} — {next_step['angle']}*\n"
-        f"{next_step['instruction']}",
+        f"📸 *الصورة {ns['num']} — {ns['angle']}*\n{ns['instruction']}",
         parse_mode="Markdown",
     )
     return PHOTO_1 + current_step + 1
 
 
 # ══════════════════════════════════════════════════════════
-# 🎉 دالة الإنهاء — تحفظ كل شيء في قاعدة البيانات
+# 🎉 الإنهاء
 # ══════════════════════════════════════════════════════════
 async def finish(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user = update.effective_user
@@ -532,402 +540,195 @@ async def finish(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     photos = context.user_data["photos"]
     participant_id = context.user_data["participant_id"]
 
-    # ─── حفظ القطعة في قاعدة البيانات ───
     item_id = save_item(participant_id, item_type, item_name)
-
-    # ─── حفظ كل الصور في قاعدة البيانات ───
     for p in photos:
         if p["url"] != "—":
             save_photo(item_id, p["angle"], p["url"])
 
     log_activity(user.id, "اكتمال_قطعة", f"{item_name} — {len(photos)} صور")
 
-    # ─── بناء رسالة الروابط ───
     links_text = ""
     for i, p in enumerate(photos, 1):
         links_text += f"{i}. {p['angle']}\n🔗 {p['url']}\n\n"
-
     all_urls = "\n".join([p["url"] for p in photos])
 
     await update.message.reply_text(
         f"🎉 *ممتاز {name}!*\n\n"
         f"تم رفع ٦ صور لـ *{item_name}* بنجاح!\n"
         "✅ تم حفظ البيانات في قاعدة بيانات بِكسلة\n\n"
-        "─────────────────\n"
-        f"📋 *روابط الصور:*\n\n"
-        f"{links_text}"
-        "─────────────────\n\n"
-        "📋 *انسخ جميع الروابط:*",
+        f"─────────────────\n📋 *روابط الصور:*\n\n{links_text}"
+        "─────────────────\n\n📋 *انسخ جميع الروابط:*",
         parse_mode="Markdown",
     )
+    await update.message.reply_text(f"📎 روابط صور: {item_name}\n\n{all_urls}")
 
-    # رسالة الروابط للنسخ
-    await update.message.reply_text(
-        f"📎 روابط صور: {item_name}\n\n{all_urls}",
-    )
-
-    # رابط الفورم إذا موجود
     if AIRTABLE_FORM_URL:
         await update.message.reply_text(
-            "📝 *الخطوة الأخيرة:*\n\n"
-            "الصق الروابط في نموذج المشاركة 👇\n"
-            f"🔗 {AIRTABLE_FORM_URL}\n\n"
-            "شكرًا لمشاركتك في بِكسلة! 🙏✨\n\n"
-            "لتصوير قطعة أخرى أرسل أي رسالة",
+            "📝 *الخطوة الأخيرة:*\n\nالصق الروابط في نموذج المشاركة 👇\n"
+            f"🔗 {AIRTABLE_FORM_URL}",
             parse_mode="Markdown",
         )
-    else:
-        await update.message.reply_text(
-            "شكرًا لمشاركتك في بِكسلة! 🙏✨\n\n"
-            "لتصوير قطعة أخرى أرسل أي رسالة",
-        )
 
-    return ConversationHandler.END
+    await show_main_menu(update.message, name)
+    return MAIN_MENU
 
 
 # ══════════════════════════════════════════════════════════
-# 📊 أمر الإحصائيات — /stats
-# يعرض ملخص سريع لكل العمليات (لك أنت فقط)
+# ⚠️ معالجة الإدخال الخاطئ
+# ══════════════════════════════════════════════════════════
+async def wrong_input_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    cs = len(context.user_data.get("photos", []))
+    step = PHOTO_STEPS[cs] if cs < 6 else PHOTO_STEPS[5]
+    await update.message.reply_text(
+        f"⚠️ أحتاج *صورة* مو نص!\n\n📸 *الصورة {step['num']} — {step['angle']}*\n{step['instruction']}",
+        parse_mode="Markdown",
+    )
+    return PHOTO_1 + cs
+
+async def wrong_input_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    await update.message.reply_text("⚠️ أحتاج *اسمك* مو صورة!\n\n📝 *أرسل لي اسمك الكامل:*", parse_mode="Markdown")
+    return NAME
+
+async def wrong_input_item(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    await update.message.reply_text("⚠️ أحتاج *اسم القطعة* مو صورة!\n\n📝 *اكتب اسم القطعة:*", parse_mode="Markdown")
+    return ITEM_NAME
+
+async def wrong_input_password(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    await update.message.reply_text("⚠️ أحتاج *كلمة السر* مو صورة!\n\n🔐 *أدخل كلمة السر:*", parse_mode="Markdown")
+    return PASSWORD
+
+
+# ══════════════════════════════════════════════════════════
+# 📊 أوامر الأدمن
 # ══════════════════════════════════════════════════════════
 async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     stats = get_stats()
-
-    # بناء نص آخر ٥ أحداث
     activity_text = ""
-    for action, details, timestamp in stats["recent_activity"]:
-        # نعرض الوقت بشكل مختصر
-        time_str = timestamp[11:16] if len(timestamp) > 16 else timestamp
-        date_str = timestamp[:10] if len(timestamp) > 10 else ""
-        activity_text += f"• {action}: {details} ({date_str} {time_str})\n"
-
+    for action, details, ts in stats["recent_activity"]:
+        t = ts[11:16] if len(ts) > 16 else ts
+        d = ts[:10] if len(ts) > 10 else ""
+        activity_text += f"• {action}: {details} ({d} {t})\n"
     if not activity_text:
         activity_text = "لا توجد أحداث بعد"
 
     await update.message.reply_text(
-        "📊 *إحصائيات بِكسلة*\n\n"
-        "─────────────────\n"
-        f"👥 عدد المشاركين: *{stats['total_participants']}*\n"
-        f"🏺 عدد القطع: *{stats['total_items']}*\n"
-        f"📸 عدد الصور: *{stats['total_photos']}*\n"
-        f"🏆 أكثر نوع شيوعًا: *{stats['top_type']}*\n"
-        f"🚫 محاولات دخول فاشلة: *{stats['failed_attempts']}*\n"
-        "─────────────────\n\n"
-        f"📋 *آخر ٥ أحداث:*\n{activity_text}",
+        f"📊 *إحصائيات بِكسلة*\n\n─────────────────\n"
+        f"👥 المشاركين: *{stats['total_participants']}*\n"
+        f"🏺 القطع: *{stats['total_items']}*\n"
+        f"📸 الصور: *{stats['total_photos']}*\n"
+        f"🏆 الأكثر شيوعًا: *{stats['top_type']}*\n"
+        f"🚫 محاولات فاشلة: *{stats['failed_attempts']}*\n"
+        f"─────────────────\n\n📋 *آخر ٥ أحداث:*\n{activity_text}",
         parse_mode="Markdown",
     )
 
 
-# ══════════════════════════════════════════════════════════
-# 🔧 دالة مساعدة — التحقق إن المستخدم هو الأدمن
-# ══════════════════════════════════════════════════════════
-def is_admin(user_id: int) -> bool:
-    """ترجع True إذا كان المستخدم من الأدمنز."""
-    return user_id in ADMIN_IDS
-
-
-# ══════════════════════════════════════════════════════════
-# 🆔 أمر /myid — يعرض رقم حسابك في تيليقرام
-# استخدمه مرة وحدة لتعرف رقمك وتضيفه كـ ADMIN_ID
-# ══════════════════════════════════════════════════════════
 async def myid_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.effective_user
     await update.message.reply_text(
-        f"🆔 رقم حسابك في تيليقرام:\n\n"
-        f"`{user.id}`\n\n"
-        "أضف هذا الرقم كـ ADMIN\\_ID في Railway Variables\n"
-        "لتفعيل أوامر الأدمن.",
+        f"🆔 رقم حسابك:\n\n`{update.effective_user.id}`\n\nأضفه كـ ADMIN\\_ID في Railway.",
         parse_mode="Markdown",
     )
 
 
-# ══════════════════════════════════════════════════════════
-# 📤 أمر /export — يصدّر كل البيانات كملفات CSV
-# 🔒 للأدمن فقط
-# ══════════════════════════════════════════════════════════
 async def export_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.effective_user
-
-    # التحقق من الصلاحيات
-    if not is_admin(user.id):
+    if not is_admin(update.effective_user.id):
         await update.message.reply_text("🚫 هذا الأمر للأدمن فقط.")
         return
-
     conn = sqlite3.connect(DB_PATH)
 
-    # ─── تصدير جدول المشاركين ───
-    participants_csv = io.StringIO()
-    writer = csv.writer(participants_csv)
-    writer.writerow(["الرقم", "تيليقرام_ID", "اليوزرنيم", "الاسم", "تاريخ_التسجيل"])
-    cursor = conn.execute("SELECT * FROM participants ORDER BY id")
-    writer.writerows(cursor.fetchall())
-
-    # ─── تصدير جدول القطع مع اسم المشارك ───
-    items_csv = io.StringIO()
-    writer = csv.writer(items_csv)
-    writer.writerow(["الرقم", "اسم_المشارك", "نوع_القطعة", "اسم_القطعة", "الحالة", "التاريخ"])
-    cursor = conn.execute("""
-        SELECT i.id, p.name, i.item_type, i.item_name, i.status, i.created_at
-        FROM items i
-        JOIN participants p ON i.participant_id = p.id
-        ORDER BY i.id
-    """)
-    writer.writerows(cursor.fetchall())
-
-    # ─── تصدير جدول الصور مع اسم القطعة ───
-    photos_csv = io.StringIO()
-    writer = csv.writer(photos_csv)
-    writer.writerow(["الرقم", "اسم_القطعة", "الزاوية", "الرابط", "تاريخ_الرفع"])
-    cursor = conn.execute("""
-        SELECT ph.id, i.item_name, ph.angle, ph.url, ph.uploaded_at
-        FROM photos ph
-        JOIN items i ON ph.item_id = i.id
-        ORDER BY ph.id
-    """)
-    writer.writerows(cursor.fetchall())
-
-    # ─── تصدير سجل الأحداث ───
-    log_csv = io.StringIO()
-    writer = csv.writer(log_csv)
-    writer.writerow(["الرقم", "تيليقرام_ID", "الحدث", "التفاصيل", "التوقيت"])
-    cursor = conn.execute("SELECT * FROM activity_log ORDER BY id DESC LIMIT 100")
-    writer.writerows(cursor.fetchall())
+    for table_name, query, headers, emoji, caption in [
+        ("المشاركين", "SELECT * FROM participants ORDER BY id", ["الرقم","تيليقرام_ID","اليوزرنيم","الاسم","التاريخ"], "👥", "جدول المشاركين"),
+        ("القطع", "SELECT i.id,p.name,i.item_type,i.item_name,i.status,i.created_at FROM items i JOIN participants p ON i.participant_id=p.id ORDER BY i.id", ["الرقم","المشارك","النوع","الاسم","الحالة","التاريخ"], "🏺", "جدول القطع"),
+        ("الصور", "SELECT ph.id,i.item_name,ph.angle,ph.url,ph.uploaded_at FROM photos ph JOIN items i ON ph.item_id=i.id ORDER BY ph.id", ["الرقم","القطعة","الزاوية","الرابط","التاريخ"], "📸", "جدول الصور"),
+        ("السجل", "SELECT * FROM activity_log ORDER BY id DESC LIMIT 100", ["الرقم","تيليقرام_ID","الحدث","التفاصيل","التوقيت"], "📋", "سجل الأحداث"),
+    ]:
+        buf = io.StringIO()
+        w = csv.writer(buf)
+        w.writerow(headers)
+        w.writerows(conn.execute(query).fetchall())
+        buf.seek(0)
+        await update.message.reply_document(
+            document=buf.getvalue().encode("utf-8-sig"),
+            filename=f"بكسلة_{table_name}_{datetime.now().strftime('%Y%m%d')}.csv",
+            caption=f"{emoji} {caption}",
+        )
 
     conn.close()
-
-    # ─── إرسال الملفات ───
-    await update.message.reply_text("📤 جاري تصدير البيانات...")
-
-    # ملف المشاركين
-    participants_csv.seek(0)
-    await update.message.reply_document(
-        document=participants_csv.getvalue().encode("utf-8-sig"),
-        filename=f"بكسلة_المشاركين_{datetime.now().strftime('%Y%m%d')}.csv",
-        caption="👥 جدول المشاركين"
-    )
-
-    # ملف القطع
-    items_csv.seek(0)
-    await update.message.reply_document(
-        document=items_csv.getvalue().encode("utf-8-sig"),
-        filename=f"بكسلة_القطع_{datetime.now().strftime('%Y%m%d')}.csv",
-        caption="🏺 جدول القطع"
-    )
-
-    # ملف الصور
-    photos_csv.seek(0)
-    await update.message.reply_document(
-        document=photos_csv.getvalue().encode("utf-8-sig"),
-        filename=f"بكسلة_الصور_{datetime.now().strftime('%Y%m%d')}.csv",
-        caption="📸 جدول الصور"
-    )
-
-    # ملف سجل الأحداث
-    log_csv.seek(0)
-    await update.message.reply_document(
-        document=log_csv.getvalue().encode("utf-8-sig"),
-        filename=f"بكسلة_السجل_{datetime.now().strftime('%Y%m%d')}.csv",
-        caption="📋 سجل الأحداث (آخر ١٠٠ حدث)"
-    )
-
-    await update.message.reply_text("✅ تم تصدير جميع البيانات!")
-    log_activity(user.id, "تصدير_بيانات", "تم تصدير CSV")
+    await update.message.reply_text("✅ تم التصدير!")
 
 
-# ══════════════════════════════════════════════════════════
-# 📋 أمر /participants — يعرض قائمة المشاركين
-# 🔒 للأدمن فقط
-# ══════════════════════════════════════════════════════════
 async def participants_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.effective_user
-
-    if not is_admin(user.id):
-        await update.message.reply_text("🚫 هذا الأمر للأدمن فقط.")
+    if not is_admin(update.effective_user.id):
+        await update.message.reply_text("🚫 للأدمن فقط.")
         return
-
     conn = sqlite3.connect(DB_PATH)
-    cursor = conn.execute("""
-        SELECT p.name, p.telegram_username, COUNT(i.id) as items_count, p.created_at
-        FROM participants p
-        LEFT JOIN items i ON p.id = i.participant_id
-        GROUP BY p.id
-        ORDER BY p.id DESC
-        LIMIT 20
-    """)
-    rows = cursor.fetchall()
+    rows = conn.execute("""SELECT p.name, p.telegram_username, COUNT(i.id), p.created_at
+        FROM participants p LEFT JOIN items i ON p.id=i.participant_id
+        GROUP BY p.id ORDER BY p.id DESC LIMIT 20""").fetchall()
     conn.close()
-
     if not rows:
         await update.message.reply_text("لا يوجد مشاركين بعد.")
         return
-
     text = "👥 *آخر ٢٠ مشارك:*\n\n"
-    for i, (name, username, items_count, created_at) in enumerate(rows, 1):
-        date_str = created_at[:10] if created_at else "—"
-        user_str = f"@{username}" if username else "—"
-        text += f"{i}. *{name}* ({user_str})\n   📦 {items_count} قطعة — 📅 {date_str}\n\n"
-
+    for i, (name, un, cnt, ca) in enumerate(rows, 1):
+        text += f"{i}. *{name}* (@{un or '—'})\n   📦 {cnt} قطعة — 📅 {(ca or '')[:10]}\n\n"
     await update.message.reply_text(text, parse_mode="Markdown")
 
 
-# ══════════════════════════════════════════════════════════
-# 🔍 أمر /item — يعرض تفاصيل قطعة محددة برقمها
-# الاستخدام: /item 1
-# 🔒 للأدمن فقط
-# ══════════════════════════════════════════════════════════
 async def item_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.effective_user
-
-    if not is_admin(user.id):
-        await update.message.reply_text("🚫 هذا الأمر للأدمن فقط.")
+    if not is_admin(update.effective_user.id):
+        await update.message.reply_text("🚫 للأدمن فقط.")
         return
-
-    # استخراج رقم القطعة من الأمر
     if not context.args:
-        await update.message.reply_text("استخدم: /item [رقم]\nمثال: /item 1")
+        await update.message.reply_text("استخدم: /item [رقم]")
         return
-
     try:
-        item_id = int(context.args[0])
+        iid = int(context.args[0])
     except ValueError:
-        await update.message.reply_text("❌ أرسل رقم صحيح. مثال: /item 1")
+        await update.message.reply_text("❌ أرسل رقم صحيح.")
         return
-
     conn = sqlite3.connect(DB_PATH)
-
-    # جلب بيانات القطعة والمشارك
-    cursor = conn.execute("""
-        SELECT i.item_name, i.item_type, i.status, i.created_at,
-               p.name, p.telegram_username
-        FROM items i
-        JOIN participants p ON i.participant_id = p.id
-        WHERE i.id = ?
-    """, (item_id,))
-    item_row = cursor.fetchone()
-
-    if not item_row:
-        await update.message.reply_text(f"❌ ما لقيت قطعة برقم {item_id}")
+    row = conn.execute("""SELECT i.item_name,i.item_type,i.status,i.created_at,p.name,p.telegram_username
+        FROM items i JOIN participants p ON i.participant_id=p.id WHERE i.id=?""", (iid,)).fetchone()
+    if not row:
+        await update.message.reply_text(f"❌ ما لقيت قطعة برقم {iid}")
         conn.close()
         return
-
-    item_name, item_type, status, created_at, p_name, p_username = item_row
-
-    # جلب صور القطعة
-    cursor = conn.execute(
-        "SELECT angle, url FROM photos WHERE item_id = ? ORDER BY id", (item_id,)
-    )
-    photos = cursor.fetchall()
+    photos = conn.execute("SELECT angle, url FROM photos WHERE item_id=? ORDER BY id", (iid,)).fetchall()
     conn.close()
-
-    # بناء الرسالة
-    photos_text = ""
-    for angle, url in photos:
-        photos_text += f"• {angle}: {url}\n"
-
-    if not photos_text:
-        photos_text = "لا توجد صور"
-
-    user_str = f"@{p_username}" if p_username else "—"
-
+    pt = "\n".join([f"• {a}: {u}" for a, u in photos]) or "لا توجد صور"
     await update.message.reply_text(
-        f"🔍 *تفاصيل القطعة #{item_id}*\n\n"
-        f"🏺 الاسم: *{item_name}*\n"
-        f"📂 النوع: {item_type}\n"
-        f"📊 الحالة: {status}\n"
-        f"📅 التاريخ: {created_at[:10] if created_at else '—'}\n"
-        f"👤 المشارك: *{p_name}* ({user_str})\n\n"
-        f"📸 *الصور:*\n{photos_text}",
+        f"🔍 *القطعة #{iid}*\n\n🏺 *{row[0]}*\n📂 {row[1]}\n📊 {row[2]}\n📅 {(row[3] or '')[:10]}\n"
+        f"👤 *{row[4]}* (@{row[5] or '—'})\n\n📸 *الصور:*\n{pt}",
         parse_mode="Markdown",
     )
 
 
 # ══════════════════════════════════════════════════════════
-# ⚠️ دالة التعامل مع الإدخال الخاطئ
-# لما المشارك يرسل نص بدل صورة أو العكس
-# ══════════════════════════════════════════════════════════
-async def wrong_input_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """لما يرسل نص أو ستيكر أو أي شيء غير صورة في مرحلة التصوير."""
-    current_step = len(context.user_data.get("photos", []))
-    step = PHOTO_STEPS[current_step] if current_step < 6 else PHOTO_STEPS[5]
-
-    await update.message.reply_text(
-        f"⚠️ أحتاج *صورة* مو نص!\n\n"
-        f"📸 *الصورة {step['num']} — {step['angle']}*\n"
-        f"{step['instruction']}",
-        parse_mode="Markdown",
-    )
-    # يبقى في نفس المرحلة
-    return PHOTO_1 + current_step
-
-
-async def wrong_input_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """لما يرسل صورة بدل الاسم."""
-    await update.message.reply_text(
-        "⚠️ أحتاج *اسمك* مو صورة!\n\n"
-        "📝 *أرسل لي اسمك الكامل:*",
-        parse_mode="Markdown",
-    )
-    return NAME
-
-
-async def wrong_input_item(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """لما يرسل صورة بدل اسم القطعة."""
-    await update.message.reply_text(
-        "⚠️ أحتاج *اسم القطعة* مو صورة!\n\n"
-        "📝 *اكتب اسم القطعة التراثية:*",
-        parse_mode="Markdown",
-    )
-    return ITEM_NAME
-
-
-async def wrong_input_password(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """لما يرسل صورة بدل كلمة السر."""
-    await update.message.reply_text(
-        "⚠️ أحتاج *كلمة السر* مو صورة!\n\n"
-        "🔐 *أدخل كلمة السر للمتابعة:*",
-        parse_mode="Markdown",
-    )
-    return PASSWORD
-# ══════════════════════════════════════════════════════════
-# ══════════════════════════════════════════════════════════
-# ❌ دالة الإلغاء
+# ❌ الإلغاء
 # ══════════════════════════════════════════════════════════
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    user = update.effective_user
-    log_activity(user.id, "إلغاء_محادثة")
-
-    await update.message.reply_text(
-        "تم الإلغاء ❌\nتقدر تبدأ من جديد بإرسال أي رسالة",
-        reply_markup=ReplyKeyboardRemove(),
-    )
+    log_activity(update.effective_user.id, "إلغاء")
+    await update.message.reply_text("تم الإلغاء ❌\nأرسل أي رسالة للبدء من جديد.", reply_markup=ReplyKeyboardRemove())
     return ConversationHandler.END
 
 
-# ══════════════════════════════════════════════════════════
-# ⏭️ دالة تخطي الصورة
-# ══════════════════════════════════════════════════════════
 async def skip_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    current_step = len(context.user_data["photos"])
-
-    if current_step == 5:
-        context.user_data["photos"].append(
-            {"angle": PHOTO_STEPS[5]["angle"], "url": "—"}
-        )
+    cs = len(context.user_data["photos"])
+    if cs == 5:
+        context.user_data["photos"].append({"angle": PHOTO_STEPS[5]["angle"], "url": "—"})
         return await finish(update, context)
-
-    await update.message.reply_text("⚠️ هذي الصورة مطلوبة. أرسل الصورة لو سمحت.")
-    return PHOTO_1 + current_step
+    await update.message.reply_text("⚠️ هذي الصورة مطلوبة.")
+    return PHOTO_1 + cs
 
 
 # ══════════════════════════════════════════════════════════
-# 🚀 الدالة الرئيسية
+# 🚀 التشغيل
 # ══════════════════════════════════════════════════════════
 def main():
-    # إنشاء قاعدة البيانات عند التشغيل
     init_database()
-
     app = Application.builder().token(BOT_TOKEN).build()
 
-    # ─── مسار المحادثة ───
     conv_handler = ConversationHandler(
         entry_points=[
             CommandHandler("start", start),
@@ -935,82 +736,56 @@ def main():
             MessageHandler(filters.PHOTO, start),
         ],
         states={
-            # مرحلة كلمة السر — نص فقط، إذا أرسل صورة ينبّهه
             PASSWORD: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, check_password),
-                MessageHandler(filters.PHOTO, wrong_input_password),
                 MessageHandler(filters.ALL & ~filters.COMMAND, wrong_input_password),
             ],
-            # مرحلة الاسم — نص فقط
+            MAIN_MENU: [
+                CallbackQueryHandler(menu_callback),
+                CommandHandler("menu", menu_command),
+                MessageHandler(filters.TEXT & ~filters.COMMAND, menu_command),
+            ],
+            AI_CHAT: [
+                CommandHandler("menu", menu_command),
+                MessageHandler(filters.TEXT & ~filters.COMMAND, ai_chat_handler),
+                MessageHandler(filters.ALL & ~filters.COMMAND, ai_chat_handler),
+            ],
             NAME: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, get_name),
-                MessageHandler(filters.PHOTO, wrong_input_name),
+                CommandHandler("menu", menu_command),
                 MessageHandler(filters.ALL & ~filters.COMMAND, wrong_input_name),
             ],
-            # مرحلة اختيار نوع القطعة
             ITEM_TYPE: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, get_item_type),
+                CommandHandler("menu", menu_command),
                 MessageHandler(filters.ALL & ~filters.COMMAND, wrong_input_item),
             ],
-            # مرحلة كتابة اسم القطعة يدويًا
             ITEM_NAME: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, get_item_name),
-                MessageHandler(filters.PHOTO, wrong_input_item),
+                CommandHandler("menu", menu_command),
                 MessageHandler(filters.ALL & ~filters.COMMAND, wrong_input_item),
             ],
-            # مراحل الصور — صورة فقط، إذا أرسل نص ينبّهه
-            PHOTO_1: [
-                MessageHandler(filters.PHOTO, handle_photo),
-                CommandHandler("skip", skip_photo),
-                MessageHandler(filters.ALL & ~filters.COMMAND, wrong_input_photo),
-            ],
-            PHOTO_2: [
-                MessageHandler(filters.PHOTO, handle_photo),
-                CommandHandler("skip", skip_photo),
-                MessageHandler(filters.ALL & ~filters.COMMAND, wrong_input_photo),
-            ],
-            PHOTO_3: [
-                MessageHandler(filters.PHOTO, handle_photo),
-                CommandHandler("skip", skip_photo),
-                MessageHandler(filters.ALL & ~filters.COMMAND, wrong_input_photo),
-            ],
-            PHOTO_4: [
-                MessageHandler(filters.PHOTO, handle_photo),
-                CommandHandler("skip", skip_photo),
-                MessageHandler(filters.ALL & ~filters.COMMAND, wrong_input_photo),
-            ],
-            PHOTO_5: [
-                MessageHandler(filters.PHOTO, handle_photo),
-                CommandHandler("skip", skip_photo),
-                MessageHandler(filters.ALL & ~filters.COMMAND, wrong_input_photo),
-            ],
-            PHOTO_6: [
-                MessageHandler(filters.PHOTO, handle_photo),
-                CommandHandler("skip", skip_photo),
-                MessageHandler(filters.ALL & ~filters.COMMAND, wrong_input_photo),
-            ],
+            PHOTO_1: [MessageHandler(filters.PHOTO, handle_photo), CommandHandler("skip", skip_photo), CommandHandler("menu", menu_command), MessageHandler(filters.ALL & ~filters.COMMAND, wrong_input_photo)],
+            PHOTO_2: [MessageHandler(filters.PHOTO, handle_photo), CommandHandler("skip", skip_photo), CommandHandler("menu", menu_command), MessageHandler(filters.ALL & ~filters.COMMAND, wrong_input_photo)],
+            PHOTO_3: [MessageHandler(filters.PHOTO, handle_photo), CommandHandler("skip", skip_photo), CommandHandler("menu", menu_command), MessageHandler(filters.ALL & ~filters.COMMAND, wrong_input_photo)],
+            PHOTO_4: [MessageHandler(filters.PHOTO, handle_photo), CommandHandler("skip", skip_photo), CommandHandler("menu", menu_command), MessageHandler(filters.ALL & ~filters.COMMAND, wrong_input_photo)],
+            PHOTO_5: [MessageHandler(filters.PHOTO, handle_photo), CommandHandler("skip", skip_photo), CommandHandler("menu", menu_command), MessageHandler(filters.ALL & ~filters.COMMAND, wrong_input_photo)],
+            PHOTO_6: [MessageHandler(filters.PHOTO, handle_photo), CommandHandler("skip", skip_photo), CommandHandler("menu", menu_command), MessageHandler(filters.ALL & ~filters.COMMAND, wrong_input_photo)],
         },
         fallbacks=[CommandHandler("cancel", cancel)],
     )
 
     app.add_handler(conv_handler)
-
-    # ─── أوامر متاحة للجميع ───
-    app.add_handler(CommandHandler("stats", stats_command))     # إحصائيات سريعة
-    app.add_handler(CommandHandler("myid", myid_command))       # معرفة رقم حسابك
-
-    # ─── أوامر الأدمن فقط ───
-    app.add_handler(CommandHandler("export", export_command))           # تصدير CSV
-    app.add_handler(CommandHandler("participants", participants_command))  # قائمة المشاركين
-    app.add_handler(CommandHandler("item", item_command))               # تفاصيل قطعة
-
-    # أي رسالة خارج المحادثة تبدأ البوت تلقائيًا
+    app.add_handler(CommandHandler("stats", stats_command))
+    app.add_handler(CommandHandler("myid", myid_command))
+    app.add_handler(CommandHandler("export", export_command))
+    app.add_handler(CommandHandler("participants", participants_command))
+    app.add_handler(CommandHandler("item", item_command))
     app.add_handler(MessageHandler(filters.ALL, start))
 
     logger.info("🚀 بوت بِكسلة شغّال!")
     app.run_polling()
 
 
-# ▶️ نقطة البداية
 if __name__ == "__main__":
     main()
