@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>بِكسلة — البحث في الإرث الرقمي</title>
+
+    <!-- خطوط عربية مميزة -->
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&family=Reem+Kufi:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* ──────────────────────────────────────────────────
+           ⚙️ الإعدادات — غيّر الألوان من هنا
+           ────────────────────────────────────────────────── */
+        :root {
+            --gold: #C9A96E;
+            --gold-light: #E8D5A3;
+            --gold-dark: #8B7340;
+            --bg-deep: #0A0A0F;
+            --bg-card: #12121A;
+            --bg-card-hover: #1A1A28;
+            --text-primary: #F0EDE6;
+            --text-secondary: #8A8690;
+            --border: rgba(201, 169, 110, 0.15);
+            --glow: rgba(201, 169, 110, 0.08);
+        }
+
+        /* ──────────────────────────────────────────────────
+           🎨 الأساسيات
+           ────────────────────────────────────────────────── */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background: var(--bg-deep);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ── خلفية متحركة ── */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background:
+                radial-gradient(ellipse 80% 60% at 20% 10%, rgba(201,169,110,0.04) 0%, transparent 60%),
+                radial-gradient(ellipse 60% 80% at 80% 90%, rgba(201,169,110,0.03) 0%, transparent 60%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* ── نمط هندسي إسلامي خفيف ── */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            opacity: 0.02;
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 5L55 30L30 55L5 30z' fill='none' stroke='%23C9A96E' stroke-width='0.5'/%3E%3Cpath d='M30 15L45 30L30 45L15 30z' fill='none' stroke='%23C9A96E' stroke-width='0.5'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* ──────────────────────────────────────────────────
+           📐 الهيكل
+           ────────────────────────────────────────────────── */
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        /* ──────────────────────────────────────────────────
+           ✨ الهيدر
+           ────────────────────────────────────────────────── */
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+            animation: fadeInDown 0.8s ease;
+        }
+
+        .logo {
+            font-family: 'Reem Kufi', sans-serif;
+            font-size: 3.2rem;
+            font-weight: 700;
+            color: var(--gold);
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+            text-shadow: 0 0 40px rgba(201,169,110,0.2);
+        }
+
+        .logo span {
+            color: var(--text-primary);
+            font-weight: 300;
+        }
+
+        .tagline {
+            font-size: 1.05rem;
+            color: var(--text-secondary);
+            font-weight: 300;
+            letter-spacing: 1px;
+        }
+
+        .divider {
+            width: 60px;
+            height: 1px;
+            background: linear-gradient(to left, transparent, var(--gold), transparent);
+            margin: 20px auto;
+        }
+
+        /* ──────────────────────────────────────────────────
+           🔍 صندوق البحث
+           ────────────────────────────────────────────────── */
+        .search-section {
+            margin-bottom: 40px;
+            animation: fadeInUp 0.8s ease 0.2s both;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 0;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            transition: all 0.4s ease;
+            box-shadow: 0 4px 30px rgba(0,0,0,0.3);
+        }
+
+        .search-box:focus-within {
+            border-color: var(--gold);
+            box-shadow: 0 4px 40px rgba(201,169,110,0.1), 0 0 0 3px rgba(201,169,110,0.05);
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 18px 24px;
+            background: transparent;
+            border: none;
+            outline: none;
+            font-family: 'Tajawal', sans-serif;
+            font-size: 1.1rem;
+            color: var(--text-primary);
+            direction: rtl;
+        }
+
+        .search-input::placeholder {
+            color: var(--text-secondary);
+            opacity: 0.6;
+        }
+
+        .search-btn {
+            padding: 18px 32px;
+            background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+            border: none;
+            cursor: pointer;
+            font-family: 'Tajawal', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--bg-deep);
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .search-btn:hover {
+            background: linear-gradient(135deg, var(--gold), var(--gold-light));
+        }
+
+        .search-btn svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* ── فلاتر البحث ── */
+        .search-filters {
+            display: flex;
+            gap: 10px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .filter-chip {
+            padding: 8px 20px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 50px;
+            font-family: 'Tajawal', sans-serif;
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .filter-chip:hover,
+        .filter-chip.active {
+            background: rgba(201,169,110,0.1);
+            border-color: var(--gold);
+            color: var(--gold);
+        }
+
+        /* ──────────────────────────────────────────────────
+           📊 الإحصائيات
+           ────────────────────────────────────────────────── */
+        .stats-bar {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-bottom: 40px;
+            animation: fadeInUp 0.8s ease 0.3s both;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-family: 'Reem Kufi', sans-serif;
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--gold);
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        /* ──────────────────────────────────────────────────
+           🃏 بطاقات النتائج
+           ────────────────────────────────────────────────── */
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 20px;
+        }
+
+        .item-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            cursor: pointer;
+            animation: fadeInUp 0.6s ease both;
+        }
+
+        .item-card:hover {
+            transform: translateY(-6px);
+            border-color: var(--gold);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 0 30px rgba(201,169,110,0.06);
+        }
+
+        .card-image {
+            width: 100%;
+            height: 200px;
+            background: linear-gradient(135deg, #1a1a28, #0f0f18);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .card-image .placeholder-icon {
+            font-size: 3rem;
+            opacity: 0.3;
+        }
+
+        .card-badge {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            background: rgba(10,10,15,0.85);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border);
+            padding: 4px 12px;
+            border-radius: 8px;
+            font-family: 'Reem Kufi', monospace;
+            font-size: 0.72rem;
+            color: var(--gold);
+            letter-spacing: 1px;
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        .card-type {
+            font-size: 0.78rem;
+            color: var(--gold);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 6px;
+        }
+
+        .card-name {
+            font-family: 'Reem Kufi', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .card-owner {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .card-footer {
+            padding: 14px 20px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-date {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+        }
+
+        .card-status {
+            font-size: 0.75rem;
+            padding: 4px 12px;
+            border-radius: 50px;
+            font-weight: 500;
+        }
+
+        .status-complete {
+            background: rgba(72, 199, 142, 0.1);
+            color: #48C78E;
+            border: 1px solid rgba(72, 199, 142, 0.2);
+        }
+
+        .status-progress {
+            background: rgba(255, 183, 77, 0.1);
+            color: #FFB74D;
+            border: 1px solid rgba(255, 183, 77, 0.2);
+        }
+
+        /* ──────────────────────────────────────────────────
+           📋 المودال — تفاصيل القطعة
+           ────────────────────────────────────────────────── */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(8px);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 85vh;
+            overflow-y: auto;
+            animation: scaleIn 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .modal-header {
+            padding: 24px 28px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-family: 'Reem Kufi', sans-serif;
+            font-size: 1.4rem;
+            color: var(--gold);
+        }
+
+        .modal-close {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-close:hover {
+            border-color: var(--gold);
+            color: var(--gold);
+        }
+
+        .modal-body {
+            padding: 28px;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(201,169,110,0.06);
+        }
+
+        .detail-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .detail-value {
+            color: var(--text-primary);
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+
+        .detail-id {
+            font-family: 'Reem Kufi', monospace;
+            color: var(--gold);
+            background: rgba(201,169,110,0.08);
+            padding: 4px 14px;
+            border-radius: 8px;
+            letter-spacing: 1px;
+            font-size: 0.88rem;
+        }
+
+        .photos-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .photo-thumb {
+            aspect-ratio: 1;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            background: var(--bg-deep);
+        }
+
+        .photo-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .photo-label {
+            text-align: center;
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        /* ──────────────────────────────────────────────────
+           💫 حالة التحميل والفراغ
+           ────────────────────────────────────────────────── */
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--gold);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .empty-icon {
+            font-size: 3.5rem;
+            margin-bottom: 16px;
+            opacity: 0.4;
+        }
+
+        .empty-text {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+
+        /* ──────────────────────────────────────────────────
+           🎬 الأنيميشنز
+           ────────────────────────────────────────────────── */
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes scaleIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* ──────────────────────────────────────────────────
+           📱 الجوال
+           ────────────────────────────────────────────────── */
+        @media (max-width: 640px) {
+            .logo { font-size: 2.4rem; }
+            .search-box { flex-direction: column; }
+            .search-btn { justify-content: center; padding: 14px; }
+            .stats-bar { gap: 24px; }
+            .stat-number { font-size: 1.5rem; }
+            .results-grid { grid-template-columns: 1fr; }
+            .photos-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <!-- ═══ الهيدر ═══ -->
+    <header class="header">
+        <div class="logo">بِكسلة</div>
+        <div class="tagline">بحث في الإرث الرقمي</div>
+        <div class="divider"></div>
+    </header>
+
+    <!-- ═══ البحث ═══ -->
+    <section class="search-section">
+        <div class="search-box">
+            <input
+                type="text"
+                class="search-input"
+                id="searchInput"
+                placeholder="ابحث بالرقم المميز أو اسم القطعة أو اسم المشارك..."
+                autocomplete="off"
+            >
+            <button class="search-btn" id="searchBtn" onclick="performSearch()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                بحث
+            </button>
+        </div>
+        <div class="search-filters">
+            <span class="filter-chip active" onclick="setFilter('all', this)">الكل</span>
+            <span class="filter-chip" onclick="setFilter('دلة قهوة', this)">☕ دلة قهوة</span>
+            <span class="filter-chip" onclick="setFilter('مبخرة', this)">🪔 مبخرة</span>
+            <span class="filter-chip" onclick="setFilter('سجادة', this)">🧶 سجادة</span>
+            <span class="filter-chip" onclick="setFilter('خنجر', this)">🗡️ خنجر</span>
+            <span class="filter-chip" onclick="setFilter('أواني فخارية', this)">🏺 أواني</span>
+            <span class="filter-chip" onclick="setFilter('حُلي', this)">💍 حُلي</span>
+        </div>
+    </section>
+
+    <!-- ═══ الإحصائيات ═══ -->
+    <div class="stats-bar">
+        <div class="stat-item">
+            <span class="stat-number" id="statItems">—</span>
+            <span class="stat-label">قطعة مسجلة</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-number" id="statParticipants">—</span>
+            <span class="stat-label">مشارك</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-number" id="statPhotos">—</span>
+            <span class="stat-label">صورة</span>
+        </div>
+    </div>
+
+    <!-- ═══ النتائج ═══ -->
+    <div id="resultsArea">
+        <div class="loading" id="loadingState">
+            <div class="loading-spinner"></div>
+            <p>جاري تحميل البيانات...</p>
+        </div>
+    </div>
+
+</div>
+
+<!-- ═══ المودال ═══ -->
+<div class="modal-overlay" id="modal" onclick="if(event.target===this)closeModal()">
+    <div class="modal-content">
+        <div class="modal-header">
+            <span class="modal-title" id="modalTitle">تفاصيل القطعة</span>
+            <button class="modal-close" onclick="closeModal()">✕</button>
+        </div>
+        <div class="modal-body" id="modalBody"></div>
+    </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// ⚙️ إعدادات Airtable — غيّرها بمعلوماتك
+// ═══════════════════════════════════════════════════════
+const AIRTABLE_TOKEN = "ضع_توكن_Airtable_هنا";   // 🔑 التوكن الشخصي
+const AIRTABLE_BASE_ID = "ضع_معرف_القاعدة_هنا";   // 📋 معرف القاعدة
+const TABLE_NAME = "المقتنيات";                      // 📊 اسم الجدول
+
+// ═══════════════════════════════════════════════════════
+// 📦 متغيرات عامة
+// ═══════════════════════════════════════════════════════
+let allRecords = [];       // كل السجلات المحمّلة
+let currentFilter = "all"; // الفلتر الحالي
+
+// ═══════════════════════════════════════════════════════
+// 🔄 تحميل البيانات من Airtable
+// ═══════════════════════════════════════════════════════
+async function loadData() {
+    try {
+        const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(TABLE_NAME)}?pageSize=100`;
+        const resp = await fetch(url, {
+            headers: { "Authorization": `Bearer ${AIRTABLE_TOKEN}` }
+        });
+
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+
+        const data = await resp.json();
+        allRecords = data.records || [];
+
+        // تحديث الإحصائيات
+        document.getElementById("statItems").textContent = allRecords.length;
+        const participants = new Set(allRecords.map(r => r.fields["اسم المشارك"]).filter(Boolean));
+        document.getElementById("statParticipants").textContent = participants.size;
+        // حساب تقريبي للصور (كل قطعة ٦ صور)
+        document.getElementById("statPhotos").textContent = allRecords.length * 6;
+
+        displayResults(allRecords);
+
+    } catch (err) {
+        console.error("خطأ في التحميل:", err);
+        document.getElementById("resultsArea").innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">⚠️</div>
+                <div class="empty-text">حصل خطأ في الاتصال بقاعدة البيانات<br>
+                <small style="color:var(--text-secondary);opacity:0.5">${err.message}</small></div>
+            </div>`;
+    }
+}
+
+// ═══════════════════════════════════════════════════════
+// 🔍 البحث
+// ═══════════════════════════════════════════════════════
+function performSearch() {
+    const query = document.getElementById("searchInput").value.trim().toLowerCase();
+    let results = allRecords;
+
+    // فلترة بالنوع
+    if (currentFilter !== "all") {
+        results = results.filter(r => {
+            const type = (r.fields["نوع القطعة"] || "").toLowerCase();
+            return type.includes(currentFilter.toLowerCase());
+        });
+    }
+
+    // فلترة بالبحث النصي
+    if (query) {
+        results = results.filter(r => {
+            const f = r.fields;
+            const searchable = [
+                f["اسم المشارك"] || "",
+                f["اسم القطعة"] || "",
+                f["نوع القطعة"] || "",
+                f["الرقم المميز"] || "",
+                f["المنطقة"] || "",
+                f["القبيلة / العائلة"] || "",
+                f["قصة القطعة"] || "",
+            ].join(" ").toLowerCase();
+            return searchable.includes(query);
+        });
+    }
+
+    displayResults(results);
+}
+
+// ═══════════════════════════════════════════════════════
+// 🏷️ الفلاتر
+// ═══════════════════════════════════════════════════════
+function setFilter(filter, chip) {
+    currentFilter = filter;
+    document.querySelectorAll(".filter-chip").forEach(c => c.classList.remove("active"));
+    chip.classList.add("active");
+    performSearch();
+}
+
+// ═══════════════════════════════════════════════════════
+// 🎨 عرض النتائج
+// ═══════════════════════════════════════════════════════
+function displayResults(records) {
+    const area = document.getElementById("resultsArea");
+
+    if (records.length === 0) {
+        area.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">🔍</div>
+                <div class="empty-text">لا توجد نتائج</div>
+            </div>`;
+        return;
+    }
+
+    let html = '<div class="results-grid">';
+
+    records.forEach((record, index) => {
+        const f = record.fields;
+        const name = f["اسم القطعة"] || "بدون اسم";
+        const type = f["نوع القطعة"] || "";
+        const owner = f["اسم المشارك"] || "—";
+        const digitalId = f["الرقم المميز"] || "—";
+        const status = f["الحالة"] || "مكتمل";
+        const date = f["created"] ? new Date(f["created"]).toLocaleDateString("ar-SA") : "—";
+
+        // محاولة عرض صورة إذا موجودة
+        const imageUrl = f["رابط صور القطعة"] || "";
+        const imageHtml = imageUrl
+            ? `<img src="${imageUrl}" alt="${name}" onerror="this.parentElement.innerHTML='<div class=\\'placeholder-icon\\'>🏺</div>'">`
+            : `<div class="placeholder-icon">🏺</div>`;
+
+        const statusClass = status.includes("مكتمل") ? "status-complete" : "status-progress";
+
+        html += `
+            <div class="item-card" style="animation-delay:${index * 0.08}s" onclick='showDetails(${JSON.stringify(record.fields).replace(/'/g, "&#39;")})'>
+                <div class="card-image">
+                    ${imageHtml}
+                    <div class="card-badge">${digitalId}</div>
+                </div>
+                <div class="card-body">
+                    <div class="card-type">${type}</div>
+                    <div class="card-name">${name}</div>
+                    <div class="card-owner">👤 ${owner}</div>
+                </div>
+                <div class="card-footer">
+                    <span class="card-date">📅 ${date}</span>
+                    <span class="card-status ${statusClass}">${status}</span>
+                </div>
+            </div>`;
+    });
+
+    html += '</div>';
+    area.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════
+// 📋 عرض تفاصيل القطعة
+// ═══════════════════════════════════════════════════════
+function showDetails(fields) {
+    const modal = document.getElementById("modal");
+    const title = document.getElementById("modalTitle");
+    const body = document.getElementById("modalBody");
+
+    title.textContent = fields["اسم القطعة"] || "تفاصيل القطعة";
+
+    let detailsHtml = `
+        <div class="detail-row">
+            <span class="detail-label">الرقم المميز</span>
+            <span class="detail-id">${fields["الرقم المميز"] || "—"}</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">المشارك</span>
+            <span class="detail-value">${fields["اسم المشارك"] || "—"}</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">النوع</span>
+            <span class="detail-value">${fields["نوع القطعة"] || "—"}</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">المنطقة</span>
+            <span class="detail-value">${fields["المنطقة"] || "—"}</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">القبيلة / العائلة</span>
+            <span class="detail-value">${fields["القبيلة / العائلة"] || "—"}</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">عمر القطعة</span>
+            <span class="detail-value">${fields["عمر القطعة التقريبي"] || "—"}</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">المادة</span>
+            <span class="detail-value">${fields["المادة المصنوعة منها"] || "—"}</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">المصدر</span>
+            <span class="detail-value">${fields["مصدر القطعة"] || "—"}</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">لا تزال تُستخدم؟</span>
+            <span class="detail-value">${fields["هل القطعة لا تزال تُستخدم؟"] || "—"}</span>
+        </div>`;
+
+    // القصة
+    const story = fields["قصة القطعة"];
+    if (story) {
+        detailsHtml += `
+            <div style="margin-top:20px;padding:16px;background:var(--glow);border-radius:12px;border:1px solid var(--border);">
+                <div style="color:var(--gold);font-weight:600;margin-bottom:8px;">📜 قصة القطعة</div>
+                <div style="color:var(--text-secondary);line-height:1.8;font-size:0.95rem;">${story}</div>
+            </div>`;
+    }
+
+    body.innerHTML = detailsHtml;
+    modal.classList.add("active");
+}
+
+function closeModal() {
+    document.getElementById("modal").classList.remove("active");
+}
+
+// ═══════════════════════════════════════════════════════
+// ⌨️ البحث بالـ Enter
+// ═══════════════════════════════════════════════════════
+document.getElementById("searchInput").addEventListener("keypress", (e) => {
+    if (e.key === "Enter") performSearch();
+});
+
+// إغلاق المودال بالـ Escape
+document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeModal();
+});
+
+// ═══════════════════════════════════════════════════════
+// ▶️ تحميل البيانات عند فتح الصفحة
+// ═══════════════════════════════════════════════════════
+loadData();
+</script>
+
+</body>
+</html>
