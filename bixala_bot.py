@@ -32,18 +32,16 @@ from telegram.ext import (
     ContextTypes,
 )
 
-# ──────────────────────────────────────────────────────────
-# ⚙️ الإعدادات — تُضاف كـ Variables في Railway
-# ──────────────────────────────────────────────────────────
+
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 IMGBB_API_KEY = os.environ["IMGBB_API_KEY"]
 BOT_PASSWORD = os.environ.get("BOT_PASSWORD", "")
-OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]                 # توكن OpenAI
-OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")  # النموذج — غيّره حسب اشتراكك
+OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]                 #  OpenAI
+OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")  
 AIRTABLE_FORM_URL = os.environ.get("AIRTABLE_FORM_URL", "")
 DB_PATH = os.environ.get("DB_PATH", "bixala_data.db")
 ADMIN_ID = os.environ.get("ADMIN_ID", "")
-SUPPORT_USERNAME = os.environ.get("SUPPORT_USERNAME", "")      # يوزرنيم الدعم الفني مثل: @bixala_support
+SUPPORT_USERNAME = os.environ.get("SUPPORT_USERNAME", "")      
 
 # ── قائمة الأدمنز ──
 ADMIN_IDS = [int(x.strip()) for x in ADMIN_ID.split(",") if x.strip().isdigit()]
