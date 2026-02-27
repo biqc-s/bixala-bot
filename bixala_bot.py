@@ -39,7 +39,6 @@ BOT_TOKEN = os.environ["BOT_TOKEN"]
 BOT_PASSWORD = os.environ.get("BOT_PASSWORD", "")
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
-AIRTABLE_FORM_URL = os.environ.get("AIRTABLE_FORM_URL", "")
 ADMIN_ID = os.environ.get("ADMIN_ID", "")
 SUPPORT_USERNAME = os.environ.get("SUPPORT_USERNAME", "")
 SUPABASE_URL = os.environ["SUPABASE_URL"]
@@ -314,7 +313,7 @@ async def check_password(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         )
         return NAME
 
-    log_activity(user.id, "كلمة_سر_خاطئة", f"أدخل: {entered}")
+    log_activity(user.id, "كلمة_سر_خاطئة", "محاولة فاشلة")
     context.user_data["attempts"] = context.user_data.get("attempts", 0) + 1
 
     if context.user_data["attempts"] >= 3:
@@ -669,13 +668,6 @@ async def finish(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         parse_mode="Markdown",
     )
     await msg.reply_text(f"📎 روابط صور: {item_name}\n\n{all_urls}")
-
-    if AIRTABLE_FORM_URL:
-        await msg.reply_text(
-            "📝 *الخطوة الأخيرة:*\n\nالصق الروابط في نموذج المشاركة 👇\n"
-            f"🔗 {AIRTABLE_FORM_URL}",
-            parse_mode="Markdown",
-        )
 
     await show_main_menu(msg, name)
     return MAIN_MENU

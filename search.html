@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>بِكسلة — البحث في الإرث الرقمي</title>
 
+    <!-- إعدادات Supabase — من ملف config.js المحلي (غير مرفوع على GitHub) -->
+    <script src="config.js"></script>
+
     <!-- خطوط عربية مميزة -->
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&family=Reem+Kufi:wght@400;500;600;700&display=swap" rel="stylesheet">
 
@@ -634,11 +637,9 @@
 
 <script>
 // ═══════════════════════════════════════════════════════
-// ⚙️ إعدادات Airtable — غيّرها بمعلوماتك
+// ⚙️ إعدادات Supabase — مُحمَّلة من config.js (انظر config.example.js)
 // ═══════════════════════════════════════════════════════
-const AIRTABLE_TOKEN = "ضع_توكن_Airtable_هنا";   // 🔑 التوكن الشخصي
-const AIRTABLE_BASE_ID = "ضع_معرف_القاعدة_هنا";   // 📋 معرف القاعدة
-const TABLE_NAME = "المقتنيات";                      // 📊 اسم الجدول
+// SUPABASE_URL و SUPABASE_ANON_KEY مُعرَّفان في config.js
 
 // ═══════════════════════════════════════════════════════
 // 📦 متغيرات عامة
@@ -647,26 +648,28 @@ let allRecords = [];       // كل السجلات المحمّلة
 let currentFilter = "all"; // الفلتر الحالي
 
 // ═══════════════════════════════════════════════════════
-// 🔄 تحميل البيانات من Airtable
+// 🔄 تحميل البيانات من Supabase
 // ═══════════════════════════════════════════════════════
 async function loadData() {
     try {
-        const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(TABLE_NAME)}?pageSize=100`;
+        const url = `${SUPABASE_URL}/rest/v1/public_items_view?order=id.desc`;
         const resp = await fetch(url, {
-            headers: { "Authorization": `Bearer ${AIRTABLE_TOKEN}` }
+            headers: {
+                "apikey": SUPABASE_ANON_KEY,
+                "Authorization": `Bearer ${SUPABASE_ANON_KEY}`
+            }
         });
 
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
 
-        const data = await resp.json();
-        allRecords = data.records || [];
+        allRecords = await resp.json();
 
         // تحديث الإحصائيات
         document.getElementById("statItems").textContent = allRecords.length;
-        const participants = new Set(allRecords.map(r => r.fields["اسم المشارك"]).filter(Boolean));
+        const participants = new Set(allRecords.map(r => r.participant_name).filter(Boolean));
         document.getElementById("statParticipants").textContent = participants.size;
-        // حساب تقريبي للصور (كل قطعة ٦ صور)
-        document.getElementById("statPhotos").textContent = allRecords.length * 6;
+        document.getElementById("statPhotos").textContent =
+            allRecords.reduce((sum, r) => sum + (r.photo_urls ? r.photo_urls.length : 0), 0);
 
         displayResults(allRecords);
 
@@ -691,7 +694,7 @@ function performSearch() {
     // فلترة بالنوع
     if (currentFilter !== "all") {
         results = results.filter(r => {
-            const type = (r.fields["نوع القطعة"] || "").toLowerCase();
+            const type = (r.item_type || "").toLowerCase();
             return type.includes(currentFilter.toLowerCase());
         });
     }
@@ -699,15 +702,12 @@ function performSearch() {
     // فلترة بالبحث النصي
     if (query) {
         results = results.filter(r => {
-            const f = r.fields;
             const searchable = [
-                f["اسم المشارك"] || "",
-                f["اسم القطعة"] || "",
-                f["نوع القطعة"] || "",
-                f["الرقم المميز"] || "",
-                f["المنطقة"] || "",
-                f["القبيلة / العائلة"] || "",
-                f["قصة القطعة"] || "",
+                r.participant_name || "",
+                r.item_name || "",
+                r.item_type || "",
+                String(r.id) || "",
+                r.story || "",
             ].join(" ").toLowerCase();
             return searchable.includes(query);
         });
@@ -744,24 +744,20 @@ function displayResults(records) {
     let html = '<div class="results-grid">';
 
     records.forEach((record, index) => {
-        const f = record.fields;
-        const name = f["اسم القطعة"] || "بدون اسم";
-        const type = f["نوع القطعة"] || "";
-        const owner = f["اسم المشارك"] || "—";
-        const digitalId = f["الرقم المميز"] || "—";
-        const status = f["الحالة"] || "مكتمل";
-        const date = f["created"] ? new Date(f["created"]).toLocaleDateString("ar-SA") : "—";
+        const name = record.item_name || "بدون اسم";
+        const type = record.item_type || "";
+        const owner = record.participant_name || "—";
+        const digitalId = `#${record.id}`;
+        const date = record.created_at ? new Date(record.created_at).toLocaleDateString("ar-SA") : "—";
 
-        // محاولة عرض صورة إذا موجودة
-        const imageUrl = f["رابط صور القطعة"] || "";
+        // عرض أول صورة من المصفوفة
+        const imageUrl = record.photo_urls && record.photo_urls.length > 0 ? record.photo_urls[0] : "";
         const imageHtml = imageUrl
             ? `<img src="${imageUrl}" alt="${name}" onerror="this.parentElement.innerHTML='<div class=\\'placeholder-icon\\'>🏺</div>'">`
             : `<div class="placeholder-icon">🏺</div>`;
 
-        const statusClass = status.includes("مكتمل") ? "status-complete" : "status-progress";
-
         html += `
-            <div class="item-card" style="animation-delay:${index * 0.08}s" onclick='showDetails(${JSON.stringify(record.fields).replace(/'/g, "&#39;")})'>
+            <div class="item-card" style="animation-delay:${index * 0.08}s" onclick='showDetails(${JSON.stringify(record).replace(/'/g, "&#39;")})'>
                 <div class="card-image">
                     ${imageHtml}
                     <div class="card-badge">${digitalId}</div>
@@ -773,7 +769,7 @@ function displayResults(records) {
                 </div>
                 <div class="card-footer">
                     <span class="card-date">📅 ${date}</span>
-                    <span class="card-status ${statusClass}">${status}</span>
+                    <span class="card-status status-complete">مكتمل</span>
                 </div>
             </div>`;
     });
@@ -785,59 +781,52 @@ function displayResults(records) {
 // ═══════════════════════════════════════════════════════
 // 📋 عرض تفاصيل القطعة
 // ═══════════════════════════════════════════════════════
-function showDetails(fields) {
+function showDetails(record) {
     const modal = document.getElementById("modal");
     const title = document.getElementById("modalTitle");
     const body = document.getElementById("modalBody");
 
-    title.textContent = fields["اسم القطعة"] || "تفاصيل القطعة";
+    title.textContent = record.item_name || "تفاصيل القطعة";
+
+    const date = record.created_at ? new Date(record.created_at).toLocaleDateString("ar-SA") : "—";
 
     let detailsHtml = `
         <div class="detail-row">
             <span class="detail-label">الرقم المميز</span>
-            <span class="detail-id">${fields["الرقم المميز"] || "—"}</span>
+            <span class="detail-id">#${record.id}</span>
         </div>
         <div class="detail-row">
             <span class="detail-label">المشارك</span>
-            <span class="detail-value">${fields["اسم المشارك"] || "—"}</span>
+            <span class="detail-value">${record.participant_name || "—"}</span>
         </div>
         <div class="detail-row">
             <span class="detail-label">النوع</span>
-            <span class="detail-value">${fields["نوع القطعة"] || "—"}</span>
+            <span class="detail-value">${record.item_type || "—"}</span>
         </div>
         <div class="detail-row">
-            <span class="detail-label">المنطقة</span>
-            <span class="detail-value">${fields["المنطقة"] || "—"}</span>
-        </div>
-        <div class="detail-row">
-            <span class="detail-label">القبيلة / العائلة</span>
-            <span class="detail-value">${fields["القبيلة / العائلة"] || "—"}</span>
-        </div>
-        <div class="detail-row">
-            <span class="detail-label">عمر القطعة</span>
-            <span class="detail-value">${fields["عمر القطعة التقريبي"] || "—"}</span>
-        </div>
-        <div class="detail-row">
-            <span class="detail-label">المادة</span>
-            <span class="detail-value">${fields["المادة المصنوعة منها"] || "—"}</span>
-        </div>
-        <div class="detail-row">
-            <span class="detail-label">المصدر</span>
-            <span class="detail-value">${fields["مصدر القطعة"] || "—"}</span>
-        </div>
-        <div class="detail-row">
-            <span class="detail-label">لا تزال تُستخدم؟</span>
-            <span class="detail-value">${fields["هل القطعة لا تزال تُستخدم؟"] || "—"}</span>
+            <span class="detail-label">تاريخ التسجيل</span>
+            <span class="detail-value">${date}</span>
         </div>`;
 
     // القصة
-    const story = fields["قصة القطعة"];
-    if (story) {
+    if (record.story) {
         detailsHtml += `
             <div style="margin-top:20px;padding:16px;background:var(--glow);border-radius:12px;border:1px solid var(--border);">
                 <div style="color:var(--gold);font-weight:600;margin-bottom:8px;">📜 قصة القطعة</div>
-                <div style="color:var(--text-secondary);line-height:1.8;font-size:0.95rem;">${story}</div>
+                <div style="color:var(--text-secondary);line-height:1.8;font-size:0.95rem;">${record.story}</div>
             </div>`;
+    }
+
+    // شبكة الصور الست
+    if (record.photo_urls && record.photo_urls.length > 0) {
+        detailsHtml += `<div style="margin-top:20px;">
+            <div style="color:var(--gold);font-weight:600;margin-bottom:12px;">📸 صور القطعة (${record.photo_urls.length})</div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">`;
+        record.photo_urls.forEach(url => {
+            detailsHtml += `<img src="${url}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;border:1px solid var(--border);"
+                onerror="this.style.display='none'">`;
+        });
+        detailsHtml += `</div></div>`;
     }
 
     body.innerHTML = detailsHtml;

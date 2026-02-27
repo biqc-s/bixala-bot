@@ -1,0 +1,12 @@
+# بيانات الاعتماد السرية — لا تُرفع على GitHub أبداً
+config.js
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+
+# بيانات محلية
+*.db
+*.sqlite
