@@ -62,7 +62,8 @@ ADMIN_IDS = [int(x.strip()) for x in ADMIN_ID.split(",") if x.strip().isdigit()]
     PHOTO_4,        # 9
     PHOTO_5,        # 10
     PHOTO_6,        # 11
-) = range(12)
+    PHONE,          # 12 — رقم الجوال
+) = range(13)
 
 # ──────────────────────────────────────────────────────────
 # 🏺 أنواع القطع
@@ -119,7 +120,13 @@ def init_database():
     c = conn.cursor()
     c.execute("""CREATE TABLE IF NOT EXISTS participants (
         id INTEGER PRIMARY KEY AUTOINCREMENT, telegram_id INTEGER,
-        telegram_username TEXT, name TEXT, created_at TEXT)""")
+        telegram_username TEXT, name TEXT, phone TEXT, created_at TEXT)""")
+    # إضافة عمود phone إذا كان الجدول موجوداً مسبقاً بدونه
+    try:
+        c.execute("ALTER TABLE participants ADD COLUMN phone TEXT")
+        conn.commit()
+    except Exception:
+        pass  # العمود موجود مسبقاً
     c.execute("""CREATE TABLE IF NOT EXISTS items (
         id INTEGER PRIMARY KEY AUTOINCREMENT, participant_id INTEGER,
         item_type TEXT, item_name TEXT, status TEXT DEFAULT 'مكتمل',
@@ -143,11 +150,11 @@ def log_activity(telegram_id, action, details=""):
     conn.close()
 
 
-def save_participant(telegram_id, username, name):
+def save_participant(telegram_id, username, name, phone=""):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    c.execute("INSERT INTO participants (telegram_id, telegram_username, name, created_at) VALUES (?,?,?,?)",
-              (telegram_id, username or "", name, datetime.now().isoformat()))
+    c.execute("INSERT INTO participants (telegram_id, telegram_username, name, phone, created_at) VALUES (?,?,?,?,?)",
+              (telegram_id, username or "", name, phone, datetime.now().isoformat()))
     pid = c.lastrowid
     conn.commit()
     conn.close()
