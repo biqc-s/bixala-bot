@@ -9,13 +9,14 @@
 # ──────────────────────────────────────────────────────────
 import logging
 import os
-import base64
 import csv
 import io
 import requests
 from collections import Counter
 from datetime import datetime
 from supabase import create_client, Client
+import cloudinary
+import cloudinary.uploader
 from telegram import (
     Update,
     ReplyKeyboardMarkup,
@@ -35,7 +36,6 @@ from telegram.ext import (
 
 
 BOT_TOKEN = os.environ["BOT_TOKEN"]
-IMGBB_API_KEY = os.environ["IMGBB_API_KEY"]
 BOT_PASSWORD = os.environ.get("BOT_PASSWORD", "")
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
@@ -44,9 +44,20 @@ ADMIN_ID = os.environ.get("ADMIN_ID", "")
 SUPPORT_USERNAME = os.environ.get("SUPPORT_USERNAME", "")
 SUPABASE_URL = os.environ["SUPABASE_URL"]
 SUPABASE_KEY = os.environ["SUPABASE_KEY"]
+CLOUDINARY_CLOUD_NAME = os.environ["CLOUDINARY_CLOUD_NAME"]
+CLOUDINARY_API_KEY = os.environ["CLOUDINARY_API_KEY"]
+CLOUDINARY_API_SECRET = os.environ["CLOUDINARY_API_SECRET"]
 
 # ── عميل Supabase ──
-db: Client = create_client(SUPABASE_URL, SUPABASE_KEY)      
+db: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+# ── إعداد Cloudinary ──
+cloudinary.config(
+    cloud_name=CLOUDINARY_CLOUD_NAME,
+    api_key=CLOUDINARY_API_KEY,
+    api_secret=CLOUDINARY_API_SECRET,
+    secure=True,
+)      
 
 # ── قائمة الأدمنز ──
 ADMIN_IDS = [int(x.strip()) for x in ADMIN_ID.split(",") if x.strip().isdigit()]
@@ -186,19 +197,18 @@ def is_admin(user_id):
 
 
 # ══════════════════════════════════════════════════════════
-# 🖼️ رفع الصور على imgBB
+# 🖼️ رفع الصور على Cloudinary
 # ══════════════════════════════════════════════════════════
-def upload_to_imgbb(file_bytes):
+def upload_to_cloudinary(file_bytes):
     try:
-        b64 = base64.b64encode(file_bytes).decode("utf-8")
-        resp = requests.post("https://api.imgbb.com/1/upload",
-                             data={"key": IMGBB_API_KEY, "image": b64}, timeout=30)
-        if resp.status_code == 200:
-            data = resp.json()
-            if data.get("success"):
-                return data["data"]["url"]
+        result = cloudinary.uploader.upload(
+            file_bytes,
+            folder="bixala",
+            resource_type="image",
+        )
+        return result.get("secure_url")
     except Exception as e:
-        logger.error(f"imgBB error: {e}")
+        logger.error(f"Cloudinary error: {e}")
     return None
 
 
@@ -527,7 +537,7 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     file_bytes = await file.download_as_bytearray()
 
     await update.message.reply_text("⏳ جاري رفع الصورة...")
-    link = upload_to_imgbb(bytes(file_bytes))
+    link = upload_to_cloudinary(bytes(file_bytes))
 
     if not link:
         log_activity(user.id, "خطأ_رفع", PHOTO_STEPS[current_step]["angle"])
