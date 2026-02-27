@@ -12,9 +12,10 @@ import os
 import base64
 import csv
 import io
-import sqlite3
 import requests
+from collections import Counter
 from datetime import datetime
+from supabase import create_client, Client
 from telegram import (
     Update,
     ReplyKeyboardMarkup,
@@ -36,12 +37,16 @@ from telegram.ext import (
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 IMGBB_API_KEY = os.environ["IMGBB_API_KEY"]
 BOT_PASSWORD = os.environ.get("BOT_PASSWORD", "")
-OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]                 #  OpenAI
-OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")  
+OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
+OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
 AIRTABLE_FORM_URL = os.environ.get("AIRTABLE_FORM_URL", "")
-DB_PATH = os.environ.get("DB_PATH", "bixala_data.db")
 ADMIN_ID = os.environ.get("ADMIN_ID", "")
-SUPPORT_USERNAME = os.environ.get("SUPPORT_USERNAME", "")      
+SUPPORT_USERNAME = os.environ.get("SUPPORT_USERNAME", "")
+SUPABASE_URL = os.environ["SUPABASE_URL"]
+SUPABASE_KEY = os.environ["SUPABASE_KEY"]
+
+# ── عميل Supabase ──
+db: Client = create_client(SUPABASE_URL, SUPABASE_KEY)      
 
 # ── قائمة الأدمنز ──
 ADMIN_IDS = [int(x.strip()) for x in ADMIN_ID.split(",") if x.strip().isdigit()]
@@ -113,92 +118,67 @@ logger = logging.getLogger(__name__)
 
 
 # ══════════════════════════════════════════════════════════
-# 🗄️ قاعدة البيانات
+# 🗄️ قاعدة البيانات — Supabase
 # ══════════════════════════════════════════════════════════
-def init_database():
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("""CREATE TABLE IF NOT EXISTS participants (
-        id INTEGER PRIMARY KEY AUTOINCREMENT, telegram_id INTEGER,
-        telegram_username TEXT, name TEXT, phone TEXT, created_at TEXT)""")
-    # إضافة عمود phone إذا كان الجدول موجوداً مسبقاً بدونه
-    try:
-        c.execute("ALTER TABLE participants ADD COLUMN phone TEXT")
-        conn.commit()
-    except Exception:
-        pass  # العمود موجود مسبقاً
-    c.execute("""CREATE TABLE IF NOT EXISTS items (
-        id INTEGER PRIMARY KEY AUTOINCREMENT, participant_id INTEGER,
-        item_type TEXT, item_name TEXT, status TEXT DEFAULT 'مكتمل',
-        created_at TEXT, FOREIGN KEY (participant_id) REFERENCES participants(id))""")
-    c.execute("""CREATE TABLE IF NOT EXISTS photos (
-        id INTEGER PRIMARY KEY AUTOINCREMENT, item_id INTEGER,
-        angle TEXT, url TEXT, uploaded_at TEXT,
-        FOREIGN KEY (item_id) REFERENCES items(id))""")
-    c.execute("""CREATE TABLE IF NOT EXISTS activity_log (
-        id INTEGER PRIMARY KEY AUTOINCREMENT, telegram_id INTEGER,
-        action TEXT, details TEXT, timestamp TEXT)""")
-    conn.commit()
-    conn.close()
-
-
 def log_activity(telegram_id, action, details=""):
-    conn = sqlite3.connect(DB_PATH)
-    conn.execute("INSERT INTO activity_log (telegram_id, action, details, timestamp) VALUES (?,?,?,?)",
-                 (telegram_id, action, details, datetime.now().isoformat()))
-    conn.commit()
-    conn.close()
+    try:
+        db.table("activity_log").insert({
+            "telegram_id": telegram_id, "action": action, "details": details
+        }).execute()
+    except Exception as e:
+        logger.error(f"log_activity error: {e}")
 
 
-def save_participant(telegram_id, username, name, phone=""):
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("INSERT INTO participants (telegram_id, telegram_username, name, phone, created_at) VALUES (?,?,?,?,?)",
-              (telegram_id, username or "", name, phone, datetime.now().isoformat()))
-    pid = c.lastrowid
-    conn.commit()
-    conn.close()
-    return pid
+def save_participant(telegram_id, username, name, phone="", city=""):
+    try:
+        res = db.table("participants").insert({
+            "telegram_id": telegram_id, "telegram_username": username or "",
+            "name": name, "phone": phone, "city": city
+        }).execute()
+        return res.data[0]["id"]
+    except Exception as e:
+        logger.error(f"save_participant error: {e}")
+        return None
 
 
 def save_item(participant_id, item_type, item_name):
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("INSERT INTO items (participant_id, item_type, item_name, status, created_at) VALUES (?,?,?,?,?)",
-              (participant_id, item_type, item_name, "مكتمل", datetime.now().isoformat()))
-    iid = c.lastrowid
-    conn.commit()
-    conn.close()
-    return iid
+    try:
+        res = db.table("items").insert({
+            "participant_id": participant_id, "item_type": item_type,
+            "item_name": item_name, "status": "مكتمل"
+        }).execute()
+        return res.data[0]["id"]
+    except Exception as e:
+        logger.error(f"save_item error: {e}")
+        return None
 
 
 def save_photo(item_id, angle, url):
-    conn = sqlite3.connect(DB_PATH)
-    conn.execute("INSERT INTO photos (item_id, angle, url, uploaded_at) VALUES (?,?,?,?)",
-                 (item_id, angle, url, datetime.now().isoformat()))
-    conn.commit()
-    conn.close()
+    try:
+        db.table("photos").insert({
+            "item_id": item_id, "angle": angle, "url": url
+        }).execute()
+    except Exception as e:
+        logger.error(f"save_photo error: {e}")
 
 
 def get_stats():
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("SELECT COUNT(*) FROM participants")
-    tp = c.fetchone()[0]
-    c.execute("SELECT COUNT(*) FROM items")
-    ti = c.fetchone()[0]
-    c.execute("SELECT COUNT(*) FROM photos")
-    tph = c.fetchone()[0]
-    c.execute("SELECT item_type, COUNT(*) as cnt FROM items GROUP BY item_type ORDER BY cnt DESC LIMIT 1")
-    r = c.fetchone()
-    tt = r[0] if r else "—"
-    c.execute("SELECT COUNT(*) FROM activity_log WHERE action = 'كلمة_سر_خاطئة'")
-    fa = c.fetchone()[0]
-    c.execute("SELECT action, details, timestamp FROM activity_log ORDER BY id DESC LIMIT 5")
-    ra = c.fetchall()
-    conn.close()
-    return {"total_participants": tp, "total_items": ti, "total_photos": tph,
-            "top_type": tt, "failed_attempts": fa, "recent_activity": ra}
+    try:
+        tp = len(db.table("participants").select("id").execute().data)
+        ti = len(db.table("items").select("id").execute().data)
+        tph = len(db.table("photos").select("id").execute().data)
+        items_data = db.table("items").select("item_type").execute().data
+        counts = Counter(r["item_type"] for r in items_data)
+        tt = counts.most_common(1)[0][0] if counts else "—"
+        fa = len(db.table("activity_log").select("id").eq("action", "كلمة_سر_خاطئة").execute().data)
+        ra_data = db.table("activity_log").select("action,details,timestamp").order("id", desc=True).limit(5).execute().data
+        ra = [(r["action"], r.get("details") or "", r.get("timestamp") or "") for r in ra_data]
+        return {"total_participants": tp, "total_items": ti, "total_photos": tph,
+                "top_type": tt, "failed_attempts": fa, "recent_activity": ra}
+    except Exception as e:
+        logger.error(f"get_stats error: {e}")
+        return {"total_participants": 0, "total_items": 0, "total_photos": 0,
+                "top_type": "—", "failed_attempts": 0, "recent_activity": []}
 
 
 def is_admin(user_id):
@@ -439,12 +419,37 @@ async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user = update.effective_user
     context.user_data["name"] = update.message.text.strip()
     name = context.user_data["name"]
-    participant_id = save_participant(user.id, user.username, name)
-    context.user_data["participant_id"] = participant_id
     log_activity(user.id, "تسجيل_اسم", name)
 
     await update.message.reply_text(
-        f"أهلاً *{name}!* 👋\n\n🏺 *اختر نوع القطعة التراثية:*",
+        f"أهلاً *{name}!* 👋\n\n"
+        "📱 *أدخل رقم جوالك للتواصل:*\n"
+        "مثال: 0512345678",
+        parse_mode="Markdown",
+        reply_markup=ReplyKeyboardRemove(),
+    )
+    return PHONE
+
+
+async def get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    user = update.effective_user
+    phone = update.message.text.strip()
+    digits = phone.replace(" ", "").replace("-", "").replace("+", "")
+
+    if not (digits.isdigit() and 8 <= len(digits) <= 15):
+        await update.message.reply_text(
+            "⚠️ رقم الجوال غير صحيح.\n\n"
+            "📱 *أدخل رقم جوالك:*\nمثال: 0512345678",
+            parse_mode="Markdown",
+        )
+        return PHONE
+
+    context.user_data["phone"] = phone
+    name = context.user_data["name"]
+    log_activity(user.id, "تسجيل_جوال", digits[:4] + "***")
+
+    await update.message.reply_text(
+        f"✅ تم!\n\n🏺 *{name}، اختر نوع القطعة التراثية:*",
         parse_mode="Markdown",
         reply_markup=ReplyKeyboardMarkup(ITEM_TYPES, one_time_keyboard=True,
                                          resize_keyboard=True, input_field_placeholder="اختر نوع القطعة..."),
@@ -487,6 +492,16 @@ async def get_item_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
 # 📷 التصوير
 # ══════════════════════════════════════════════════════════
 async def ask_first_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    user = update.effective_user
+    # حفظ المشارك في Supabase عند أول صورة (لدينا الاسم والجوال الآن)
+    if "participant_id" not in context.user_data:
+        pid = save_participant(
+            user.id, user.username,
+            context.user_data.get("name", ""),
+            context.user_data.get("phone", ""),
+        )
+        context.user_data["participant_id"] = pid
+
     item = context.user_data["item_name"]
     step = PHOTO_STEPS[0]
     await update.message.reply_text(
@@ -594,6 +609,10 @@ async def wrong_input_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     await update.message.reply_text("⚠️ أحتاج *اسمك* مو صورة!\n\n📝 *أرسل لي اسمك الكامل:*", parse_mode="Markdown")
     return NAME
 
+async def wrong_input_phone(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    await update.message.reply_text("⚠️ أحتاج *رقم الجوال* مو صورة!\n\n📱 *أدخل رقم جوالك:*\nمثال: 0512345678", parse_mode="Markdown")
+    return PHONE
+
 async def wrong_input_item(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await update.message.reply_text("⚠️ أحتاج *اسم القطعة* مو صورة!\n\n📝 *اكتب اسم القطعة:*", parse_mode="Markdown")
     return ITEM_NAME
@@ -639,26 +658,49 @@ async def export_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user.id):
         await update.message.reply_text("🚫 هذا الأمر للأدمن فقط.")
         return
-    conn = sqlite3.connect(DB_PATH)
 
-    for table_name, query, headers, emoji, caption in [
-        ("المشاركين", "SELECT * FROM participants ORDER BY id", ["الرقم","تيليقرام_ID","اليوزرنيم","الاسم","التاريخ"], "👥", "جدول المشاركين"),
-        ("القطع", "SELECT i.id,p.name,i.item_type,i.item_name,i.status,i.created_at FROM items i JOIN participants p ON i.participant_id=p.id ORDER BY i.id", ["الرقم","المشارك","النوع","الاسم","الحالة","التاريخ"], "🏺", "جدول القطع"),
-        ("الصور", "SELECT ph.id,i.item_name,ph.angle,ph.url,ph.uploaded_at FROM photos ph JOIN items i ON ph.item_id=i.id ORDER BY ph.id", ["الرقم","القطعة","الزاوية","الرابط","التاريخ"], "📸", "جدول الصور"),
-        ("السجل", "SELECT * FROM activity_log ORDER BY id DESC LIMIT 100", ["الرقم","تيليقرام_ID","الحدث","التفاصيل","التوقيت"], "📋", "سجل الأحداث"),
-    ]:
+    await update.message.reply_text("⏳ جاري تجهيز الملفات...")
+
+    exports = [
+        {
+            "name": "المشاركين", "emoji": "👥", "caption": "جدول المشاركين",
+            "headers": ["الرقم", "تيليقرام_ID", "اليوزرنيم", "الاسم", "الجوال", "المدينة", "التاريخ"],
+            "data": db.table("participants").select("id,telegram_id,telegram_username,name,phone,city,created_at").order("id").execute().data,
+            "fields": ["id", "telegram_id", "telegram_username", "name", "phone", "city", "created_at"],
+        },
+        {
+            "name": "القطع", "emoji": "🏺", "caption": "جدول القطع",
+            "headers": ["الرقم", "participant_id", "النوع", "الاسم", "الحالة", "التاريخ"],
+            "data": db.table("items").select("id,participant_id,item_type,item_name,status,created_at").order("id").execute().data,
+            "fields": ["id", "participant_id", "item_type", "item_name", "status", "created_at"],
+        },
+        {
+            "name": "الصور", "emoji": "📸", "caption": "جدول الصور",
+            "headers": ["الرقم", "item_id", "الزاوية", "الرابط", "التاريخ"],
+            "data": db.table("photos").select("id,item_id,angle,url,uploaded_at").order("id").execute().data,
+            "fields": ["id", "item_id", "angle", "url", "uploaded_at"],
+        },
+        {
+            "name": "السجل", "emoji": "📋", "caption": "سجل الأحداث",
+            "headers": ["الرقم", "تيليقرام_ID", "الحدث", "التفاصيل", "التوقيت"],
+            "data": db.table("activity_log").select("id,telegram_id,action,details,timestamp").order("id", desc=True).limit(100).execute().data,
+            "fields": ["id", "telegram_id", "action", "details", "timestamp"],
+        },
+    ]
+
+    for exp in exports:
         buf = io.StringIO()
         w = csv.writer(buf)
-        w.writerow(headers)
-        w.writerows(conn.execute(query).fetchall())
+        w.writerow(exp["headers"])
+        for row in exp["data"]:
+            w.writerow([row.get(f, "") for f in exp["fields"]])
         buf.seek(0)
         await update.message.reply_document(
             document=buf.getvalue().encode("utf-8-sig"),
-            filename=f"بكسلة_{table_name}_{datetime.now().strftime('%Y%m%d')}.csv",
-            caption=f"{emoji} {caption}",
+            filename=f"بكسلة_{exp['name']}_{datetime.now().strftime('%Y%m%d')}.csv",
+            caption=f"{exp['emoji']} {exp['caption']}",
         )
 
-    conn.close()
     await update.message.reply_text("✅ تم التصدير!")
 
 
@@ -666,17 +708,17 @@ async def participants_command(update: Update, context: ContextTypes.DEFAULT_TYP
     if not is_admin(update.effective_user.id):
         await update.message.reply_text("🚫 للأدمن فقط.")
         return
-    conn = sqlite3.connect(DB_PATH)
-    rows = conn.execute("""SELECT p.name, p.telegram_username, COUNT(i.id), p.created_at
-        FROM participants p LEFT JOIN items i ON p.id=i.participant_id
-        GROUP BY p.id ORDER BY p.id DESC LIMIT 20""").fetchall()
-    conn.close()
+    rows = db.table("participants").select("name,telegram_username,phone,created_at").order("id", desc=True).limit(20).execute().data
     if not rows:
         await update.message.reply_text("لا يوجد مشاركين بعد.")
         return
     text = "👥 *آخر ٢٠ مشارك:*\n\n"
-    for i, (name, un, cnt, ca) in enumerate(rows, 1):
-        text += f"{i}. *{name}* (@{un or '—'})\n   📦 {cnt} قطعة — 📅 {(ca or '')[:10]}\n\n"
+    for i, r in enumerate(rows, 1):
+        name = r.get("name", "—")
+        un = r.get("telegram_username") or "—"
+        phone = r.get("phone") or "—"
+        ca = (r.get("created_at") or "")[:10]
+        text += f"{i}. *{name}* (@{un})\n   📱 {phone} — 📅 {ca}\n\n"
     await update.message.reply_text(text, parse_mode="Markdown")
 
 
@@ -692,19 +734,21 @@ async def item_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except ValueError:
         await update.message.reply_text("❌ أرسل رقم صحيح.")
         return
-    conn = sqlite3.connect(DB_PATH)
-    row = conn.execute("""SELECT i.item_name,i.item_type,i.status,i.created_at,p.name,p.telegram_username
-        FROM items i JOIN participants p ON i.participant_id=p.id WHERE i.id=?""", (iid,)).fetchone()
-    if not row:
+
+    item_data = db.table("items").select("item_name,item_type,status,created_at,participant_id").eq("id", iid).execute().data
+    if not item_data:
         await update.message.reply_text(f"❌ ما لقيت قطعة برقم {iid}")
-        conn.close()
         return
-    photos = conn.execute("SELECT angle, url FROM photos WHERE item_id=? ORDER BY id", (iid,)).fetchall()
-    conn.close()
-    pt = "\n".join([f"• {a}: {u}" for a, u in photos]) or "لا توجد صور"
+    item = item_data[0]
+    part_data = db.table("participants").select("name,telegram_username,phone").eq("id", item["participant_id"]).execute().data
+    part = part_data[0] if part_data else {}
+    photos = db.table("photos").select("angle,url").eq("item_id", iid).order("id").execute().data
+    pt = "\n".join([f"• {p['angle']}: {p['url']}" for p in photos]) or "لا توجد صور"
     await update.message.reply_text(
-        f"🔍 *القطعة #{iid}*\n\n🏺 *{row[0]}*\n📂 {row[1]}\n📊 {row[2]}\n📅 {(row[3] or '')[:10]}\n"
-        f"👤 *{row[4]}* (@{row[5] or '—'})\n\n📸 *الصور:*\n{pt}",
+        f"🔍 *القطعة #{iid}*\n\n🏺 *{item['item_name']}*\n📂 {item['item_type']}\n📊 {item['status']}\n"
+        f"📅 {(item.get('created_at') or '')[:10]}\n"
+        f"👤 *{part.get('name','—')}* (@{part.get('telegram_username') or '—'})\n"
+        f"📱 {part.get('phone') or '—'}\n\n📸 *الصور:*\n{pt}",
         parse_mode="Markdown",
     )
 
@@ -731,7 +775,6 @@ async def skip_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 # 🚀 التشغيل
 # ══════════════════════════════════════════════════════════
 def main():
-    init_database()
     app = Application.builder().token(BOT_TOKEN).build()
 
     conv_handler = ConversationHandler(
@@ -759,6 +802,11 @@ def main():
                 MessageHandler(filters.TEXT & ~filters.COMMAND, get_name),
                 CommandHandler("menu", menu_command),
                 MessageHandler(filters.ALL & ~filters.COMMAND, wrong_input_name),
+            ],
+            PHONE: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, get_phone),
+                CommandHandler("menu", menu_command),
+                MessageHandler(filters.ALL & ~filters.COMMAND, wrong_input_phone),
             ],
             ITEM_TYPE: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, get_item_type),
