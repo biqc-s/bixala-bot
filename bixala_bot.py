@@ -79,7 +79,8 @@ ADMIN_IDS = [int(x.strip()) for x in ADMIN_ID.split(",") if x.strip().isdigit()]
     PHOTO_5,        # 10
     PHOTO_6,        # 11
     PHONE,          # 12 — رقم الجوال
-) = range(13)
+    STORY,          # 13 — قصة القطعة
+) = range(14)
 
 # ──────────────────────────────────────────────────────────
 # 🏺 أنواع القطع
@@ -152,11 +153,11 @@ def save_participant(telegram_id, username, name, phone="", city=""):
         return None
 
 
-def save_item(participant_id, item_type, item_name):
+def save_item(participant_id, item_type, item_name, story=""):
     try:
         res = db.table("items").insert({
             "participant_id": participant_id, "item_type": item_type,
-            "item_name": item_name, "status": "مكتمل"
+            "item_name": item_name, "status": "مكتمل", "story": story
         }).execute()
         return res.data[0]["id"]
     except Exception as e:
@@ -194,6 +195,11 @@ def get_stats():
 
 def is_admin(user_id):
     return user_id in ADMIN_IDS
+
+
+def photo_progress(done: int) -> str:
+    """يرجع شريط التقدم البصري: ✅✅✅⬜⬜⬜"""
+    return "".join(["✅" if i < done else "⬜" for i in range(6)])
 
 
 # ══════════════════════════════════════════════════════════
@@ -512,18 +518,27 @@ async def ask_first_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         )
         context.user_data["participant_id"] = pid
 
+    name = context.user_data.get("name", "")
     item = context.user_data["item_name"]
+    item_type = context.user_data.get("item_type", item)
     step = PHOTO_STEPS[0]
+
+    # ملخص المعلومات قبل البدء بالتصوير
     await update.message.reply_text(
-        f"ممتاز! بنصوّر *{item}* من ٦ زوايا 📷\n\n"
+        f"✅ *تأكيد المعلومات:*\n\n"
+        f"👤 الاسم: *{name}*\n"
+        f"🏺 القطعة: *{item}*\n"
+        f"📂 النوع: *{item_type}*\n\n"
         "─────────────────\n"
         "💡 *نصائح سريعة للتصوير:*\n"
         "• استخدم إضاءة طبيعية أو واضحة\n"
-        "• خلّ الخلفية بسيطة\n"
-        "• لا تستخدم فلاش\n"
-        "• تأكد القطعة واضحة وكاملة\n"
+        "• خلّ الخلفية بسيطة ومريحة\n"
+        "• لا تستخدم الفلاش\n"
+        "• تأكد أن القطعة واضحة وكاملة في الصورة\n"
         "─────────────────\n\n"
-        f"📸 *الصورة {step['num']} — {step['angle']}*\n{step['instruction']}",
+        f"📸 *الصورة {step['num']} — {step['angle']}*\n"
+        f"{photo_progress(0)}\n\n"
+        f"{step['instruction']}",
         parse_mode="Markdown", reply_markup=ReplyKeyboardRemove(),
     )
     return PHOTO_1
@@ -541,18 +556,26 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
 
     if not link:
         log_activity(user.id, "خطأ_رفع", PHOTO_STEPS[current_step]["angle"])
-        await update.message.reply_text("❌ حصل خطأ. أرسل الصورة مرة ثانية.")
+        await update.message.reply_text(
+            "❌ حصل خطأ أثناء رفع الصورة.\nأرسلها مرة ثانية."
+        )
         return PHOTO_1 + current_step
 
+    done = current_step + 1
     context.user_data["photos"].append({"angle": PHOTO_STEPS[current_step]["angle"], "url": link})
-    log_activity(user.id, "رفع_صورة", f"{current_step+1}/٦")
-    await update.message.reply_text(f"✅ تم رفع الصورة {current_step+1}/٦")
+    log_activity(user.id, "رفع_صورة", f"{done}/٦")
 
-    if current_step + 1 >= 6:
-        return await finish(update, context)
+    if done >= 6:
+        await update.message.reply_text(
+            f"✅ *اكتملت الصور!*\n{photo_progress(6)}  ٦/٦\n\n"
+            "ممتاز، تم رفع جميع الصور الست بنجاح! 🎉",
+            parse_mode="Markdown",
+        )
+        return await ask_story(update, context)
 
     ns = PHOTO_STEPS[current_step + 1]
     await update.message.reply_text(
+        f"✅ تم رفع الصورة {done}/٦\n{photo_progress(done)}\n\n"
         f"📸 *الصورة {ns['num']} — {ns['angle']}*\n{ns['instruction']}",
         parse_mode="Markdown",
     )
@@ -560,46 +583,101 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
 
 
 # ══════════════════════════════════════════════════════════
+# 📖 خطوة القصة
+# ══════════════════════════════════════════════════════════
+async def ask_story(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    item = context.user_data["item_name"]
+    await update.message.reply_text(
+        f"📖 *قصة {item}*\n\n"
+        "أخبرنا حكايتها! يمكنك الكتابة عن:\n\n"
+        "• من أين جاءت هذه القطعة؟\n"
+        "• من صنعها أو من أهداها للعائلة؟\n"
+        "• كم عمرها تقريبًا؟\n"
+        "• ما قيمتها أو ذكراها الخاصة؟\n\n"
+        "✍️ اكتب قصتها بأسلوبك، أو اضغط *تخطي* إذا ما تعرف:",
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("⏭️ تخطي القصة", callback_data="skip_story")]
+        ]),
+    )
+    return STORY
+
+
+async def get_story(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    user = update.effective_user
+    story = update.message.text.strip()
+    context.user_data["story"] = story
+    log_activity(user.id, "تسجيل_قصة", story[:60])
+    return await finish(update, context)
+
+
+async def skip_story_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    query = update.callback_query
+    await query.answer()
+    context.user_data["story"] = ""
+    log_activity(update.effective_user.id, "تخطي_قصة")
+    return await finish(update, context)
+
+
+async def wrong_input_story(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    await update.message.reply_text(
+        "⚠️ أحتاج *نص مكتوب* لقصة القطعة!\n\n"
+        "✍️ اكتب القصة، أو اضغط *تخطي*:",
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("⏭️ تخطي القصة", callback_data="skip_story")]
+        ]),
+    )
+    return STORY
+
+
+# ══════════════════════════════════════════════════════════
 # 🎉 الإنهاء
 # ══════════════════════════════════════════════════════════
 async def finish(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user = update.effective_user
+    # نحصل على كائن الرسالة سواء جاء من نص أو من callback
+    msg = update.message or update.callback_query.message
+
     name = context.user_data["name"]
     item_name = context.user_data["item_name"]
     item_type = context.user_data.get("item_type", item_name)
+    story = context.user_data.get("story", "")
     photos = context.user_data["photos"]
     participant_id = context.user_data["participant_id"]
 
-    item_id = save_item(participant_id, item_type, item_name)
+    item_id = save_item(participant_id, item_type, item_name, story)
     for p in photos:
         if p["url"] != "—":
             save_photo(item_id, p["angle"], p["url"])
 
     log_activity(user.id, "اكتمال_قطعة", f"{item_name} — {len(photos)} صور")
 
+    story_line = f"\n📖 *القصة:* {story}\n" if story else ""
     links_text = ""
     for i, p in enumerate(photos, 1):
         links_text += f"{i}. {p['angle']}\n🔗 {p['url']}\n\n"
-    all_urls = "\n".join([p["url"] for p in photos])
+    all_urls = "\n".join([p["url"] for p in photos if p["url"] != "—"])
 
-    await update.message.reply_text(
-        f"🎉 *ممتاز {name}!*\n\n"
-        f"تم رفع ٦ صور لـ *{item_name}* بنجاح!\n"
-        "✅ تم حفظ البيانات في قاعدة بيانات بِكسلة\n\n"
+    await msg.reply_text(
+        f"🎉 *تم بنجاح يا {name}!*\n\n"
+        f"🏺 *{item_name}* — {item_type}\n"
+        f"📸 تم رفع {len([p for p in photos if p['url'] != '—'])} صور{story_line}\n"
+        "✅ حُفظت كل البيانات في قاعدة بيانات بِكسلة\n\n"
         f"─────────────────\n📋 *روابط الصور:*\n\n{links_text}"
         "─────────────────\n\n📋 *انسخ جميع الروابط:*",
         parse_mode="Markdown",
     )
-    await update.message.reply_text(f"📎 روابط صور: {item_name}\n\n{all_urls}")
+    await msg.reply_text(f"📎 روابط صور: {item_name}\n\n{all_urls}")
 
     if AIRTABLE_FORM_URL:
-        await update.message.reply_text(
+        await msg.reply_text(
             "📝 *الخطوة الأخيرة:*\n\nالصق الروابط في نموذج المشاركة 👇\n"
             f"🔗 {AIRTABLE_FORM_URL}",
             parse_mode="Markdown",
         )
 
-    await show_main_menu(update.message, name)
+    await show_main_menu(msg, name)
     return MAIN_MENU
 
 
@@ -680,9 +758,9 @@ async def export_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         },
         {
             "name": "القطع", "emoji": "🏺", "caption": "جدول القطع",
-            "headers": ["الرقم", "participant_id", "النوع", "الاسم", "الحالة", "التاريخ"],
-            "data": db.table("items").select("id,participant_id,item_type,item_name,status,created_at").order("id").execute().data,
-            "fields": ["id", "participant_id", "item_type", "item_name", "status", "created_at"],
+            "headers": ["الرقم", "participant_id", "النوع", "الاسم", "القصة", "الحالة", "التاريخ"],
+            "data": db.table("items").select("id,participant_id,item_type,item_name,story,status,created_at").order("id").execute().data,
+            "fields": ["id", "participant_id", "item_type", "item_name", "story", "status", "created_at"],
         },
         {
             "name": "الصور", "emoji": "📸", "caption": "جدول الصور",
@@ -745,7 +823,7 @@ async def item_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ أرسل رقم صحيح.")
         return
 
-    item_data = db.table("items").select("item_name,item_type,status,created_at,participant_id").eq("id", iid).execute().data
+    item_data = db.table("items").select("item_name,item_type,status,story,created_at,participant_id").eq("id", iid).execute().data
     if not item_data:
         await update.message.reply_text(f"❌ ما لقيت قطعة برقم {iid}")
         return
@@ -754,11 +832,13 @@ async def item_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     part = part_data[0] if part_data else {}
     photos = db.table("photos").select("angle,url").eq("item_id", iid).order("id").execute().data
     pt = "\n".join([f"• {p['angle']}: {p['url']}" for p in photos]) or "لا توجد صور"
+    story_text = f"\n📖 *القصة:*\n{item.get('story')}\n" if item.get("story") else ""
     await update.message.reply_text(
         f"🔍 *القطعة #{iid}*\n\n🏺 *{item['item_name']}*\n📂 {item['item_type']}\n📊 {item['status']}\n"
         f"📅 {(item.get('created_at') or '')[:10]}\n"
         f"👤 *{part.get('name','—')}* (@{part.get('telegram_username') or '—'})\n"
-        f"📱 {part.get('phone') or '—'}\n\n📸 *الصور:*\n{pt}",
+        f"📱 {part.get('phone') or '—'}\n"
+        f"{story_text}\n📸 *الصور:*\n{pt}",
         parse_mode="Markdown",
     )
 
@@ -776,8 +856,8 @@ async def skip_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     cs = len(context.user_data["photos"])
     if cs == 5:
         context.user_data["photos"].append({"angle": PHOTO_STEPS[5]["angle"], "url": "—"})
-        return await finish(update, context)
-    await update.message.reply_text("⚠️ هذي الصورة مطلوبة.")
+        return await ask_story(update, context)
+    await update.message.reply_text("⚠️ هذي الصورة مطلوبة، أرسلها.")
     return PHOTO_1 + cs
 
 
@@ -834,6 +914,12 @@ def main():
             PHOTO_4: [MessageHandler(filters.PHOTO, handle_photo), CommandHandler("skip", skip_photo), CommandHandler("menu", menu_command), MessageHandler(filters.ALL & ~filters.COMMAND, wrong_input_photo)],
             PHOTO_5: [MessageHandler(filters.PHOTO, handle_photo), CommandHandler("skip", skip_photo), CommandHandler("menu", menu_command), MessageHandler(filters.ALL & ~filters.COMMAND, wrong_input_photo)],
             PHOTO_6: [MessageHandler(filters.PHOTO, handle_photo), CommandHandler("skip", skip_photo), CommandHandler("menu", menu_command), MessageHandler(filters.ALL & ~filters.COMMAND, wrong_input_photo)],
+            STORY: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, get_story),
+                CallbackQueryHandler(skip_story_callback, pattern="^skip_story$"),
+                CommandHandler("menu", menu_command),
+                MessageHandler(filters.ALL & ~filters.COMMAND, wrong_input_story),
+            ],
         },
         fallbacks=[CommandHandler("cancel", cancel)],
     )
