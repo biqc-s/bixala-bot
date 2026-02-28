@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,7 +10,9 @@
     <script src="config.js"></script>
 
     <!-- خطوط عربية مميزة -->
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&family=Reem+Kufi:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&family=Reem+Kufi:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
 
     <style>
         /* ──────────────────────────────────────────────────
@@ -31,7 +34,11 @@
         /* ──────────────────────────────────────────────────
            🎨 الأساسيات
            ────────────────────────────────────────────────── */
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
         body {
             font-family: 'Tajawal', sans-serif;
@@ -45,10 +52,13 @@
         body::before {
             content: '';
             position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
             background:
-                radial-gradient(ellipse 80% 60% at 20% 10%, rgba(201,169,110,0.04) 0%, transparent 60%),
-                radial-gradient(ellipse 60% 80% at 80% 90%, rgba(201,169,110,0.03) 0%, transparent 60%);
+                radial-gradient(ellipse 80% 60% at 20% 10%, rgba(201, 169, 110, 0.04) 0%, transparent 60%),
+                radial-gradient(ellipse 60% 80% at 80% 90%, rgba(201, 169, 110, 0.03) 0%, transparent 60%);
             pointer-events: none;
             z-index: 0;
         }
@@ -57,7 +67,10 @@
         body::after {
             content: '';
             position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
             opacity: 0.02;
             background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 5L55 30L30 55L5 30z' fill='none' stroke='%23C9A96E' stroke-width='0.5'/%3E%3Cpath d='M30 15L45 30L30 45L15 30z' fill='none' stroke='%23C9A96E' stroke-width='0.5'/%3E%3C/svg%3E");
             pointer-events: none;
@@ -91,7 +104,7 @@
             color: var(--gold);
             letter-spacing: 2px;
             margin-bottom: 8px;
-            text-shadow: 0 0 40px rgba(201,169,110,0.2);
+            text-shadow: 0 0 40px rgba(201, 169, 110, 0.2);
         }
 
         .logo span {
@@ -129,12 +142,12 @@
             border-radius: 16px;
             overflow: hidden;
             transition: all 0.4s ease;
-            box-shadow: 0 4px 30px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
         }
 
         .search-box:focus-within {
             border-color: var(--gold);
-            box-shadow: 0 4px 40px rgba(201,169,110,0.1), 0 0 0 3px rgba(201,169,110,0.05);
+            box-shadow: 0 4px 40px rgba(201, 169, 110, 0.1), 0 0 0 3px rgba(201, 169, 110, 0.05);
         }
 
         .search-input {
@@ -202,7 +215,7 @@
 
         .filter-chip:hover,
         .filter-chip.active {
-            background: rgba(201,169,110,0.1);
+            background: rgba(201, 169, 110, 0.1);
             border-color: var(--gold);
             color: var(--gold);
         }
@@ -258,7 +271,7 @@
         .item-card:hover {
             transform: translateY(-6px);
             border-color: var(--gold);
-            box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 0 30px rgba(201,169,110,0.06);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 0 30px rgba(201, 169, 110, 0.06);
         }
 
         .card-image {
@@ -287,7 +300,7 @@
             position: absolute;
             top: 12px;
             left: 12px;
-            background: rgba(10,10,15,0.85);
+            background: rgba(10, 10, 15, 0.85);
             backdrop-filter: blur(10px);
             border: 1px solid var(--border);
             padding: 4px 12px;
@@ -365,8 +378,11 @@
         .modal-overlay {
             display: none;
             position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.8);
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
             backdrop-filter: blur(8px);
             z-index: 100;
             justify-content: center;
@@ -432,7 +448,7 @@
             display: flex;
             justify-content: space-between;
             padding: 12px 0;
-            border-bottom: 1px solid rgba(201,169,110,0.06);
+            border-bottom: 1px solid rgba(201, 169, 110, 0.06);
         }
 
         .detail-label {
@@ -449,7 +465,7 @@
         .detail-id {
             font-family: 'Reem Kufi', monospace;
             color: var(--gold);
-            background: rgba(201,169,110,0.08);
+            background: rgba(201, 169, 110, 0.08);
             padding: 4px 14px;
             border-radius: 8px;
             letter-spacing: 1px;
@@ -524,239 +540,298 @@
            🎬 الأنيميشنز
            ────────────────────────────────────────────────── */
         @keyframes fadeInDown {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
         }
 
         @keyframes scaleIn {
-            from { opacity: 0; transform: scale(0.95); }
-            to { opacity: 1; transform: scale(1); }
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
         }
 
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         /* ──────────────────────────────────────────────────
            📱 الجوال
            ────────────────────────────────────────────────── */
         @media (max-width: 640px) {
-            .logo { font-size: 2.4rem; }
-            .search-box { flex-direction: column; }
-            .search-btn { justify-content: center; padding: 14px; }
-            .stats-bar { gap: 24px; }
-            .stat-number { font-size: 1.5rem; }
-            .results-grid { grid-template-columns: 1fr; }
-            .photos-grid { grid-template-columns: repeat(2, 1fr); }
+            .logo {
+                font-size: 2.4rem;
+            }
+
+            .search-box {
+                flex-direction: column;
+            }
+
+            .search-btn {
+                justify-content: center;
+                padding: 14px;
+            }
+
+            .stats-bar {
+                gap: 24px;
+            }
+
+            .stat-number {
+                font-size: 1.5rem;
+            }
+
+            .results-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .photos-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
         }
     </style>
 </head>
+
 <body>
 
-<div class="container">
+    <div class="container">
 
-    <!-- ═══ الهيدر ═══ -->
-    <header class="header">
-        <div class="logo">بِكسلة</div>
-        <div class="tagline">بحث في الإرث الرقمي</div>
-        <div class="divider"></div>
-    </header>
+        <!-- ═══ الهيدر ═══ -->
+        <header class="header">
+            <div class="logo">بِكسلة</div>
+            <div class="tagline">بحث في الإرث الرقمي</div>
+            <div class="divider"></div>
+        </header>
 
-    <!-- ═══ البحث ═══ -->
-    <section class="search-section">
-        <div class="search-box">
-            <input
-                type="text"
-                class="search-input"
-                id="searchInput"
-                placeholder="ابحث بالرقم المميز أو اسم القطعة أو اسم المشارك..."
-                autocomplete="off"
-            >
-            <button class="search-btn" id="searchBtn" onclick="performSearch()">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                بحث
-            </button>
-        </div>
-        <div class="search-filters">
-            <span class="filter-chip active" onclick="setFilter('all', this)">الكل</span>
-            <span class="filter-chip" onclick="setFilter('دلة قهوة', this)">☕ دلة قهوة</span>
-            <span class="filter-chip" onclick="setFilter('مبخرة', this)">🪔 مبخرة</span>
-            <span class="filter-chip" onclick="setFilter('سجادة', this)">🧶 سجادة</span>
-            <span class="filter-chip" onclick="setFilter('خنجر', this)">🗡️ خنجر</span>
-            <span class="filter-chip" onclick="setFilter('أواني فخارية', this)">🏺 أواني</span>
-            <span class="filter-chip" onclick="setFilter('حُلي', this)">💍 حُلي</span>
-        </div>
-    </section>
+        <!-- ═══ البحث ═══ -->
+        <section class="search-section">
+            <div class="search-box">
+                <input type="text" class="search-input" id="searchInput"
+                    placeholder="ابحث بالرقم المميز أو اسم القطعة أو اسم المشارك..." autocomplete="off">
+                <button class="search-btn" id="searchBtn" onclick="performSearch()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                        stroke-linecap="round">
+                        <circle cx="11" cy="11" r="8" />
+                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </svg>
+                    بحث
+                </button>
+            </div>
+            <div class="search-filters">
+                <span class="filter-chip active" onclick="setFilter('all', this)">الكل</span>
+                <span class="filter-chip" onclick="setFilter('دلة قهوة', this)">☕ دلة قهوة</span>
+                <span class="filter-chip" onclick="setFilter('مبخرة', this)">🪔 مبخرة</span>
+                <span class="filter-chip" onclick="setFilter('سجادة', this)">🧶 سجادة</span>
+                <span class="filter-chip" onclick="setFilter('خنجر', this)">🗡️ خنجر</span>
+                <span class="filter-chip" onclick="setFilter('أواني فخارية', this)">🏺 أواني</span>
+                <span class="filter-chip" onclick="setFilter('حُلي', this)">💍 حُلي</span>
+            </div>
+        </section>
 
-    <!-- ═══ الإحصائيات ═══ -->
-    <div class="stats-bar">
-        <div class="stat-item">
-            <span class="stat-number" id="statItems">—</span>
-            <span class="stat-label">قطعة مسجلة</span>
+        <!-- ═══ الإحصائيات ═══ -->
+        <div class="stats-bar">
+            <div class="stat-item">
+                <span class="stat-number" id="statItems">—</span>
+                <span class="stat-label">قطعة مسجلة</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number" id="statParticipants">—</span>
+                <span class="stat-label">مشارك</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number" id="statPhotos">—</span>
+                <span class="stat-label">صورة</span>
+            </div>
         </div>
-        <div class="stat-item">
-            <span class="stat-number" id="statParticipants">—</span>
-            <span class="stat-label">مشارك</span>
+
+        <!-- ═══ النتائج ═══ -->
+        <div id="resultsArea">
+            <div class="loading" id="loadingState">
+                <div class="loading-spinner"></div>
+                <p>جاري تحميل البيانات...</p>
+            </div>
         </div>
-        <div class="stat-item">
-            <span class="stat-number" id="statPhotos">—</span>
-            <span class="stat-label">صورة</span>
+
+    </div>
+
+    <!-- ═══ المودال ═══ -->
+    <div class="modal-overlay" id="modal" onclick="if(event.target===this)closeModal()">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title" id="modalTitle">تفاصيل القطعة</span>
+                <button class="modal-close" onclick="closeModal()">✕</button>
+            </div>
+            <div class="modal-body" id="modalBody"></div>
         </div>
     </div>
 
-    <!-- ═══ النتائج ═══ -->
-    <div id="resultsArea">
-        <div class="loading" id="loadingState">
-            <div class="loading-spinner"></div>
-            <p>جاري تحميل البيانات...</p>
-        </div>
-    </div>
+    <script>
+        // ═══════════════════════════════════════════════════════
+        // ⚙️ إعدادات Supabase — مُحمَّلة من config.js (انظر config.example.js)
+        // ═══════════════════════════════════════════════════════
+        // SUPABASE_URL و SUPABASE_ANON_KEY مُعرَّفان في config.js
 
-</div>
+        // ═══════════════════════════════════════════════════════
+        // 📦 متغيرات عامة
+        // ═══════════════════════════════════════════════════════
+        let allRecords = [];       // كل السجلات المحمّلة
+        let currentFilter = "all"; // الفلتر الحالي
 
-<!-- ═══ المودال ═══ -->
-<div class="modal-overlay" id="modal" onclick="if(event.target===this)closeModal()">
-    <div class="modal-content">
-        <div class="modal-header">
-            <span class="modal-title" id="modalTitle">تفاصيل القطعة</span>
-            <button class="modal-close" onclick="closeModal()">✕</button>
-        </div>
-        <div class="modal-body" id="modalBody"></div>
-    </div>
-</div>
+        // ═══════════════════════════════════════════════════════
+        // 🛡️ حماية من حقن الأكواد (XSS)
+        // ═══════════════════════════════════════════════════════
+        function escapeHtml(text) {
+            if (!text) return "";
+            const div = document.createElement("div");
+            div.textContent = text;
+            return div.innerHTML;
+        }
 
-<script>
-// ═══════════════════════════════════════════════════════
-// ⚙️ إعدادات Supabase — مُحمَّلة من config.js (انظر config.example.js)
-// ═══════════════════════════════════════════════════════
-// SUPABASE_URL و SUPABASE_ANON_KEY مُعرَّفان في config.js
+        // ═══════════════════════════════════════════════════════
+        // 🔄 تحميل البيانات من Supabase
+        // ═══════════════════════════════════════════════════════
+        async function loadData() {
+            try {
+                const url = `${SUPABASE_URL}/rest/v1/public_items_view?order=id.desc`;
+                const resp = await fetch(url, {
+                    headers: {
+                        "apikey": SUPABASE_ANON_KEY,
+                        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`
+                    }
+                });
 
-// ═══════════════════════════════════════════════════════
-// 📦 متغيرات عامة
-// ═══════════════════════════════════════════════════════
-let allRecords = [];       // كل السجلات المحمّلة
-let currentFilter = "all"; // الفلتر الحالي
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
 
-// ═══════════════════════════════════════════════════════
-// 🔄 تحميل البيانات من Supabase
-// ═══════════════════════════════════════════════════════
-async function loadData() {
-    try {
-        const url = `${SUPABASE_URL}/rest/v1/public_items_view?order=id.desc`;
-        const resp = await fetch(url, {
-            headers: {
-                "apikey": SUPABASE_ANON_KEY,
-                "Authorization": `Bearer ${SUPABASE_ANON_KEY}`
-            }
-        });
+                allRecords = await resp.json();
 
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                // تحديث الإحصائيات
+                document.getElementById("statItems").textContent = allRecords.length;
+                const participants = new Set(allRecords.map(r => r.participant_name).filter(Boolean));
+                document.getElementById("statParticipants").textContent = participants.size;
+                document.getElementById("statPhotos").textContent =
+                    allRecords.reduce((sum, r) => sum + (r.photo_urls ? r.photo_urls.length : 0), 0);
 
-        allRecords = await resp.json();
+                displayResults(allRecords);
 
-        // تحديث الإحصائيات
-        document.getElementById("statItems").textContent = allRecords.length;
-        const participants = new Set(allRecords.map(r => r.participant_name).filter(Boolean));
-        document.getElementById("statParticipants").textContent = participants.size;
-        document.getElementById("statPhotos").textContent =
-            allRecords.reduce((sum, r) => sum + (r.photo_urls ? r.photo_urls.length : 0), 0);
-
-        displayResults(allRecords);
-
-    } catch (err) {
-        console.error("خطأ في التحميل:", err);
-        document.getElementById("resultsArea").innerHTML = `
+            } catch (err) {
+                console.error("خطأ في التحميل:", err);
+                document.getElementById("resultsArea").innerHTML = `
             <div class="empty-state">
                 <div class="empty-icon">⚠️</div>
                 <div class="empty-text">حصل خطأ في الاتصال بقاعدة البيانات<br>
                 <small style="color:var(--text-secondary);opacity:0.5">${err.message}</small></div>
             </div>`;
-    }
-}
+            }
+        }
 
-// ═══════════════════════════════════════════════════════
-// 🔍 البحث
-// ═══════════════════════════════════════════════════════
-function performSearch() {
-    const query = document.getElementById("searchInput").value.trim().toLowerCase();
-    let results = allRecords;
+        // ═══════════════════════════════════════════════════════
+        // 🔍 البحث
+        // ═══════════════════════════════════════════════════════
+        function performSearch() {
+            const query = document.getElementById("searchInput").value.trim().toLowerCase();
+            let results = allRecords;
 
-    // فلترة بالنوع
-    if (currentFilter !== "all") {
-        results = results.filter(r => {
-            const type = (r.item_type || "").toLowerCase();
-            return type.includes(currentFilter.toLowerCase());
-        });
-    }
+            // فلترة بالنوع
+            if (currentFilter !== "all") {
+                results = results.filter(r => {
+                    const type = (r.item_type || "").toLowerCase();
+                    return type.includes(currentFilter.toLowerCase());
+                });
+            }
 
-    // فلترة بالبحث النصي
-    if (query) {
-        results = results.filter(r => {
-            const searchable = [
-                r.participant_name || "",
-                r.item_name || "",
-                r.item_type || "",
-                String(r.id) || "",
-                r.story || "",
-            ].join(" ").toLowerCase();
-            return searchable.includes(query);
-        });
-    }
+            // فلترة بالبحث النصي
+            if (query) {
+                results = results.filter(r => {
+                    const searchable = [
+                        r.participant_name || "",
+                        r.item_name || "",
+                        r.item_type || "",
+                        String(r.id) || "",
+                        r.story || "",
+                    ].join(" ").toLowerCase();
+                    return searchable.includes(query);
+                });
+            }
 
-    displayResults(results);
-}
+            displayResults(results);
+        }
 
-// ═══════════════════════════════════════════════════════
-// 🏷️ الفلاتر
-// ═══════════════════════════════════════════════════════
-function setFilter(filter, chip) {
-    currentFilter = filter;
-    document.querySelectorAll(".filter-chip").forEach(c => c.classList.remove("active"));
-    chip.classList.add("active");
-    performSearch();
-}
+        // ═══════════════════════════════════════════════════════
+        // 🏷️ الفلاتر
+        // ═══════════════════════════════════════════════════════
+        function setFilter(filter, chip) {
+            currentFilter = filter;
+            document.querySelectorAll(".filter-chip").forEach(c => c.classList.remove("active"));
+            chip.classList.add("active");
+            performSearch();
+        }
 
-// ═══════════════════════════════════════════════════════
-// 🎨 عرض النتائج
-// ═══════════════════════════════════════════════════════
-function displayResults(records) {
-    const area = document.getElementById("resultsArea");
+        // ═══════════════════════════════════════════════════════
+        // 🎨 عرض النتائج
+        // ═══════════════════════════════════════════════════════
+        function displayResults(records) {
+            const area = document.getElementById("resultsArea");
 
-    if (records.length === 0) {
-        area.innerHTML = `
+            if (records.length === 0) {
+                area.innerHTML = `
             <div class="empty-state">
                 <div class="empty-icon">🔍</div>
                 <div class="empty-text">لا توجد نتائج</div>
             </div>`;
-        return;
-    }
+                return;
+            }
 
-    let html = '<div class="results-grid">';
+            let html = '<div class="results-grid">';
 
-    records.forEach((record, index) => {
-        const name = record.item_name || "بدون اسم";
-        const type = record.item_type || "";
-        const owner = record.participant_name || "—";
-        const digitalId = `#${record.id}`;
-        const date = record.created_at ? new Date(record.created_at).toLocaleDateString("ar-SA") : "—";
+            records.forEach((record, index) => {
+                const name = escapeHtml(record.item_name || "بدون اسم");
+                const type = escapeHtml(record.item_type || "");
+                const owner = escapeHtml(record.participant_name || "—");
+                const digitalId = `#${record.id}`;
+                const date = record.created_at ? new Date(record.created_at).toLocaleDateString("ar-SA") : "—";
 
-        // عرض أول صورة من المصفوفة
-        const imageUrl = record.photo_urls && record.photo_urls.length > 0 ? record.photo_urls[0] : "";
-        const imageHtml = imageUrl
-            ? `<img src="${imageUrl}" alt="${name}" onerror="this.parentElement.innerHTML='<div class=\\'placeholder-icon\\'>🏺</div>'">`
-            : `<div class="placeholder-icon">🏺</div>`;
+                // عرض أول صورة من المصفوفة
+                const imageUrl = record.photo_urls && record.photo_urls.length > 0 ? record.photo_urls[0] : "";
+                const imageHtml = imageUrl
+                    ? `<img src="${imageUrl}" alt="${name}" onerror="this.parentElement.innerHTML='<div class=\\'placeholder-icon\\'>🏺</div>'">`
+                    : `<div class="placeholder-icon">🏺</div>`;
 
-        html += `
+                html += `
             <div class="item-card" style="animation-delay:${index * 0.08}s" onclick='showDetails(${JSON.stringify(record).replace(/'/g, "&#39;")})'>
                 <div class="card-image">
                     ${imageHtml}
@@ -772,88 +847,89 @@ function displayResults(records) {
                     <span class="card-status status-complete">مكتمل</span>
                 </div>
             </div>`;
-    });
+            });
 
-    html += '</div>';
-    area.innerHTML = html;
-}
+            html += '</div>';
+            area.innerHTML = html;
+        }
 
-// ═══════════════════════════════════════════════════════
-// 📋 عرض تفاصيل القطعة
-// ═══════════════════════════════════════════════════════
-function showDetails(record) {
-    const modal = document.getElementById("modal");
-    const title = document.getElementById("modalTitle");
-    const body = document.getElementById("modalBody");
+        // ═══════════════════════════════════════════════════════
+        // 📋 عرض تفاصيل القطعة
+        // ═══════════════════════════════════════════════════════
+        function showDetails(record) {
+            const modal = document.getElementById("modal");
+            const title = document.getElementById("modalTitle");
+            const body = document.getElementById("modalBody");
 
-    title.textContent = record.item_name || "تفاصيل القطعة";
+            title.textContent = record.item_name || "تفاصيل القطعة";  // textContent آمن تلقائياً
 
-    const date = record.created_at ? new Date(record.created_at).toLocaleDateString("ar-SA") : "—";
+            const date = record.created_at ? new Date(record.created_at).toLocaleDateString("ar-SA") : "—";
 
-    let detailsHtml = `
+            let detailsHtml = `
         <div class="detail-row">
             <span class="detail-label">الرقم المميز</span>
             <span class="detail-id">#${record.id}</span>
         </div>
         <div class="detail-row">
             <span class="detail-label">المشارك</span>
-            <span class="detail-value">${record.participant_name || "—"}</span>
+            <span class="detail-value">${escapeHtml(record.participant_name || "—")}</span>
         </div>
         <div class="detail-row">
             <span class="detail-label">النوع</span>
-            <span class="detail-value">${record.item_type || "—"}</span>
+            <span class="detail-value">${escapeHtml(record.item_type || "—")}</span>
         </div>
         <div class="detail-row">
             <span class="detail-label">تاريخ التسجيل</span>
             <span class="detail-value">${date}</span>
         </div>`;
 
-    // القصة
-    if (record.story) {
-        detailsHtml += `
+            // القصة
+            if (record.story) {
+                detailsHtml += `
             <div style="margin-top:20px;padding:16px;background:var(--glow);border-radius:12px;border:1px solid var(--border);">
                 <div style="color:var(--gold);font-weight:600;margin-bottom:8px;">📜 قصة القطعة</div>
-                <div style="color:var(--text-secondary);line-height:1.8;font-size:0.95rem;">${record.story}</div>
+                <div style="color:var(--text-secondary);line-height:1.8;font-size:0.95rem;">${escapeHtml(record.story)}</div>
             </div>`;
-    }
+            }
 
-    // شبكة الصور الست
-    if (record.photo_urls && record.photo_urls.length > 0) {
-        detailsHtml += `<div style="margin-top:20px;">
+            // شبكة الصور الست
+            if (record.photo_urls && record.photo_urls.length > 0) {
+                detailsHtml += `<div style="margin-top:20px;">
             <div style="color:var(--gold);font-weight:600;margin-bottom:12px;">📸 صور القطعة (${record.photo_urls.length})</div>
             <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">`;
-        record.photo_urls.forEach(url => {
-            detailsHtml += `<img src="${url}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;border:1px solid var(--border);"
+                record.photo_urls.forEach(url => {
+                    detailsHtml += `<img src="${url}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;border:1px solid var(--border);"
                 onerror="this.style.display='none'">`;
+                });
+                detailsHtml += `</div></div>`;
+            }
+
+            body.innerHTML = detailsHtml;
+            modal.classList.add("active");
+        }
+
+        function closeModal() {
+            document.getElementById("modal").classList.remove("active");
+        }
+
+        // ═══════════════════════════════════════════════════════
+        // ⌨️ البحث بالـ Enter
+        // ═══════════════════════════════════════════════════════
+        document.getElementById("searchInput").addEventListener("keypress", (e) => {
+            if (e.key === "Enter") performSearch();
         });
-        detailsHtml += `</div></div>`;
-    }
 
-    body.innerHTML = detailsHtml;
-    modal.classList.add("active");
-}
+        // إغلاق المودال بالـ Escape
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "Escape") closeModal();
+        });
 
-function closeModal() {
-    document.getElementById("modal").classList.remove("active");
-}
-
-// ═══════════════════════════════════════════════════════
-// ⌨️ البحث بالـ Enter
-// ═══════════════════════════════════════════════════════
-document.getElementById("searchInput").addEventListener("keypress", (e) => {
-    if (e.key === "Enter") performSearch();
-});
-
-// إغلاق المودال بالـ Escape
-document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") closeModal();
-});
-
-// ═══════════════════════════════════════════════════════
-// ▶️ تحميل البيانات عند فتح الصفحة
-// ═══════════════════════════════════════════════════════
-loadData();
-</script>
+        // ═══════════════════════════════════════════════════════
+        // ▶️ تحميل البيانات عند فتح الصفحة
+        // ═══════════════════════════════════════════════════════
+        loadData();
+    </script>
 
 </body>
+
 </html>
