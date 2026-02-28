@@ -11,24 +11,49 @@
 
     <!-- خطوط عربية مميزة -->
     <link
-        href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&family=Reem+Kufi:wght@400;500;600;700&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&family=Cairo:wght@300;400;600;700;900&family=Amiri:wght@400;700&display=swap"
         rel="stylesheet">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+        integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA=="
+        crossorigin="anonymous" referrerpolicy="no-referrer">
 
     <style>
         /* ──────────────────────────────────────────────────
-           ⚙️ الإعدادات — غيّر الألوان من هنا
+           ⚙️ الإعدادات — لوحة الألوان الجديدة المستوحاة من الموقع الرئيسي
            ────────────────────────────────────────────────── */
         :root {
-            --gold: #C9A96E;
-            --gold-light: #E8D5A3;
-            --gold-dark: #8B7340;
-            --bg-deep: #0A0A0F;
-            --bg-card: #12121A;
-            --bg-card-hover: #1A1A28;
-            --text-primary: #F0EDE6;
-            --text-secondary: #8A8690;
-            --border: rgba(201, 169, 110, 0.15);
-            --glow: rgba(201, 169, 110, 0.08);
+            --bg-primary: #0a0a12;
+            --bg-secondary: #111125;
+            --bg-card: rgba(20, 20, 50, 0.6);
+            --bg-glass: rgba(255, 255, 255, 0.04);
+            --border-glass: rgba(255, 255, 255, 0.08);
+
+            --gold-100: #f5f0ff;
+            --gold-200: #a78bfa;
+            --gold-300: #8b5cf6;
+            --gold-400: #7c3aed;
+            --gold-500: #6d28d9;
+            --gold-gradient: linear-gradient(135deg, #a78bfa, #7c3aed, #60a5fa);
+            --gold-glow: 0 0 30px rgba(139, 92, 246, 0.35), 0 0 60px rgba(96, 165, 250, 0.15);
+
+            --teal-400: #2dd4bf;
+            --teal-500: #14b8a6;
+            --teal-glow: 0 0 30px rgba(45, 212, 191, 0.2);
+
+            --text-primary: #f0ece4;
+            --text-secondary: rgba(240, 236, 228, 0.7);
+            --text-muted: rgba(240, 236, 228, 0.4);
+
+            --font-heading: 'Cairo', sans-serif;
+            --font-body: 'Tajawal', sans-serif;
+            --font-decorative: 'Amiri', serif;
+
+            --border: rgba(139, 92, 246, 0.15);
+            --glow: rgba(139, 92, 246, 0.08);
+
+            --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-smooth: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         /* ──────────────────────────────────────────────────
@@ -41,11 +66,12 @@
         }
 
         body {
-            font-family: 'Tajawal', sans-serif;
-            background: var(--bg-deep);
+            font-family: var(--font-body);
+            background: var(--bg-primary);
             color: var(--text-primary);
             min-height: 100vh;
             overflow-x: hidden;
+            direction: rtl;
         }
 
         /* ── خلفية متحركة ── */
@@ -57,22 +83,8 @@
             right: 0;
             bottom: 0;
             background:
-                radial-gradient(ellipse 80% 60% at 20% 10%, rgba(201, 169, 110, 0.04) 0%, transparent 60%),
-                radial-gradient(ellipse 60% 80% at 80% 90%, rgba(201, 169, 110, 0.03) 0%, transparent 60%);
-            pointer-events: none;
-            z-index: 0;
-        }
-
-        /* ── نمط هندسي إسلامي خفيف ── */
-        body::after {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            opacity: 0.02;
-            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 5L55 30L30 55L5 30z' fill='none' stroke='%23C9A96E' stroke-width='0.5'/%3E%3Cpath d='M30 15L45 30L30 45L15 30z' fill='none' stroke='%23C9A96E' stroke-width='0.5'/%3E%3C/svg%3E");
+                radial-gradient(ellipse 70% 60% at 30% 40%, rgba(139, 92, 246, 0.08) 0%, transparent 70%),
+                radial-gradient(ellipse 50% 50% at 70% 60%, rgba(96, 165, 250, 0.05) 0%, transparent 70%);
             pointer-events: none;
             z-index: 0;
         }
@@ -98,22 +110,21 @@
         }
 
         .logo {
-            font-family: 'Reem Kufi', sans-serif;
+            font-family: var(--font-heading);
             font-size: 3.2rem;
-            font-weight: 700;
-            color: var(--gold);
+            font-weight: 800;
+            background: var(--gold-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
             letter-spacing: 2px;
             margin-bottom: 8px;
-            text-shadow: 0 0 40px rgba(201, 169, 110, 0.2);
-        }
-
-        .logo span {
-            color: var(--text-primary);
-            font-weight: 300;
+            text-shadow: 0 0 40px rgba(139, 92, 246, 0.2);
         }
 
         .tagline {
-            font-size: 1.05rem;
+            font-family: var(--font-decorative);
+            font-size: 1.15rem;
             color: var(--text-secondary);
             font-weight: 300;
             letter-spacing: 1px;
@@ -121,82 +132,106 @@
 
         .divider {
             width: 60px;
-            height: 1px;
-            background: linear-gradient(to left, transparent, var(--gold), transparent);
+            height: 2px;
+            background: var(--gold-gradient);
             margin: 20px auto;
+            border-radius: 2px;
         }
 
         /* ──────────────────────────────────────────────────
-           🔍 صندوق البحث
+           🔍 صندوق البحث (تصميم بكسلة الجديد)
            ────────────────────────────────────────────────── */
         .search-section {
             margin-bottom: 40px;
             animation: fadeInUp 0.8s ease 0.2s both;
+            text-align: center;
         }
 
-        .search-box {
+        .hero-search-wrapper {
+            position: relative;
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 2px;
+            border-radius: 50px;
+            background: linear-gradient(135deg, rgba(167, 139, 250, 0.6), rgba(96, 165, 250, 0.4), rgba(139, 92, 246, 0.25));
+            transition: var(--transition-smooth);
+        }
+
+        .hero-search-wrapper:focus-within {
+            box-shadow: var(--gold-glow);
+        }
+
+        .hero-search-wrapper::after {
+            content: '';
+            position: absolute;
+            inset: -1px;
+            border-radius: 50px;
+            background: var(--gold-gradient);
+            opacity: 0.12;
+            filter: blur(14px);
+            z-index: -1;
+        }
+
+        .hero-search-inner {
             display: flex;
-            gap: 0;
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            overflow: hidden;
-            transition: all 0.4s ease;
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+            align-items: center;
+            background: rgba(10, 10, 18, 0.96);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 50px;
+            padding: 8px 8px 8px 24px;
+            gap: 12px;
         }
 
-        .search-box:focus-within {
-            border-color: var(--gold);
-            box-shadow: 0 4px 40px rgba(201, 169, 110, 0.1), 0 0 0 3px rgba(201, 169, 110, 0.05);
+        .search-input-icon {
+            width: 20px;
+            height: 20px;
+            color: var(--gold-400);
+            flex-shrink: 0;
         }
 
         .search-input {
             flex: 1;
-            padding: 18px 24px;
             background: transparent;
             border: none;
             outline: none;
-            font-family: 'Tajawal', sans-serif;
-            font-size: 1.1rem;
             color: var(--text-primary);
+            font-family: var(--font-body);
+            font-size: 1.05rem;
             direction: rtl;
+            min-width: 0;
+            padding: 8px 0;
         }
 
         .search-input::placeholder {
-            color: var(--text-secondary);
-            opacity: 0.6;
+            color: var(--text-muted);
         }
 
         .search-btn {
-            padding: 18px 32px;
-            background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+            padding: 12px 32px;
             border: none;
-            cursor: pointer;
-            font-family: 'Tajawal', sans-serif;
+            border-radius: 100px;
+            background: var(--gold-gradient);
+            color: var(--bg-primary);
+            font-family: var(--font-body);
             font-size: 1rem;
             font-weight: 700;
-            color: var(--bg-deep);
-            letter-spacing: 1px;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 8px;
+            cursor: pointer;
+            transition: var(--transition-fast);
+            flex-shrink: 0;
+            white-space: nowrap;
         }
 
         .search-btn:hover {
-            background: linear-gradient(135deg, var(--gold), var(--gold-light));
-        }
-
-        .search-btn svg {
-            width: 20px;
-            height: 20px;
+            transform: scale(1.04);
+            box-shadow: var(--gold-glow);
         }
 
         /* ── فلاتر البحث ── */
         .search-filters {
             display: flex;
             gap: 10px;
-            margin-top: 16px;
+            margin-top: 24px;
             flex-wrap: wrap;
             justify-content: center;
         }
@@ -204,20 +239,22 @@
         .filter-chip {
             padding: 8px 20px;
             background: var(--bg-card);
-            border: 1px solid var(--border);
+            border: 1px solid var(--border-glass);
             border-radius: 50px;
-            font-family: 'Tajawal', sans-serif;
-            font-size: 0.88rem;
+            font-family: var(--font-body);
+            font-size: 0.9rem;
             color: var(--text-secondary);
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: var(--transition-fast);
+            backdrop-filter: blur(10px);
         }
 
         .filter-chip:hover,
         .filter-chip.active {
-            background: rgba(201, 169, 110, 0.1);
-            border-color: var(--gold);
-            color: var(--gold);
+            background: rgba(139, 92, 246, 0.15);
+            border-color: var(--gold-400);
+            color: var(--gold-100);
+            box-shadow: 0 0 15px rgba(139, 92, 246, 0.2);
         }
 
         /* ──────────────────────────────────────────────────
@@ -236,15 +273,18 @@
         }
 
         .stat-number {
-            font-family: 'Reem Kufi', sans-serif;
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--gold);
+            font-family: var(--font-heading);
+            font-size: 2.2rem;
+            font-weight: 800;
+            background: var(--gold-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
             display: block;
         }
 
         .stat-label {
-            font-size: 0.82rem;
+            font-size: 0.85rem;
             color: var(--text-secondary);
             margin-top: 2px;
         }
@@ -260,24 +300,25 @@
 
         .item-card {
             background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 16px;
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-lg);
             overflow: hidden;
-            transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            transition: var(--transition-smooth);
             cursor: pointer;
             animation: fadeInUp 0.6s ease both;
+            backdrop-filter: blur(10px);
         }
 
         .item-card:hover {
             transform: translateY(-6px);
-            border-color: var(--gold);
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 0 30px rgba(201, 169, 110, 0.06);
+            border-color: rgba(139, 92, 246, 0.3);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), var(--gold-glow);
         }
 
         .card-image {
             width: 100%;
-            height: 200px;
-            background: linear-gradient(135deg, #1a1a28, #0f0f18);
+            height: 220px;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.05), rgba(96, 165, 250, 0.05));
             display: flex;
             align-items: center;
             justify-content: center;
@@ -289,10 +330,15 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
+            transition: var(--transition-smooth);
+        }
+
+        .item-card:hover .card-image img {
+            transform: scale(1.05);
         }
 
         .card-image .placeholder-icon {
-            font-size: 3rem;
+            font-size: 3.5rem;
             opacity: 0.3;
         }
 
@@ -300,14 +346,14 @@
             position: absolute;
             top: 12px;
             left: 12px;
-            background: rgba(10, 10, 15, 0.85);
+            background: rgba(10, 10, 18, 0.85);
             backdrop-filter: blur(10px);
-            border: 1px solid var(--border);
+            border: 1px solid var(--border-glass);
             padding: 4px 12px;
             border-radius: 8px;
-            font-family: 'Reem Kufi', monospace;
-            font-size: 0.72rem;
-            color: var(--gold);
+            font-family: monospace;
+            font-size: 0.75rem;
+            color: var(--gold-200);
             letter-spacing: 1px;
         }
 
@@ -316,60 +362,58 @@
         }
 
         .card-type {
-            font-size: 0.78rem;
-            color: var(--gold);
+            font-size: 0.8rem;
+            color: var(--gold-300);
             font-weight: 500;
             text-transform: uppercase;
-            letter-spacing: 1.5px;
+            letter-spacing: 1px;
             margin-bottom: 6px;
         }
 
         .card-name {
-            font-family: 'Reem Kufi', sans-serif;
+            font-family: var(--font-heading);
             font-size: 1.25rem;
-            font-weight: 600;
+            font-weight: 700;
             color: var(--text-primary);
             margin-bottom: 8px;
         }
 
         .card-owner {
-            font-size: 0.88rem;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-footer {
+            padding: 14px 20px;
+            border-top: 1px solid var(--border-glass);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.01);
+        }
+
+        .card-date {
+            font-size: 0.8rem;
             color: var(--text-secondary);
             display: flex;
             align-items: center;
             gap: 6px;
         }
 
-        .card-footer {
-            padding: 14px 20px;
-            border-top: 1px solid var(--border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .card-date {
-            font-size: 0.78rem;
-            color: var(--text-secondary);
-        }
-
         .card-status {
             font-size: 0.75rem;
             padding: 4px 12px;
             border-radius: 50px;
-            font-weight: 500;
+            font-weight: 600;
         }
 
         .status-complete {
-            background: rgba(72, 199, 142, 0.1);
-            color: #48C78E;
-            border: 1px solid rgba(72, 199, 142, 0.2);
-        }
-
-        .status-progress {
-            background: rgba(255, 183, 77, 0.1);
-            color: #FFB74D;
-            border: 1px solid rgba(255, 183, 77, 0.2);
+            background: rgba(45, 212, 191, 0.1);
+            color: var(--teal-400);
+            border: 1px solid rgba(45, 212, 191, 0.2);
         }
 
         /* ──────────────────────────────────────────────────
@@ -382,8 +426,8 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(8px);
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(12px);
             z-index: 100;
             justify-content: center;
             align-items: center;
@@ -396,48 +440,71 @@
         }
 
         .modal-content {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 20px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-lg);
             max-width: 600px;
             width: 100%;
             max-height: 85vh;
             overflow-y: auto;
+            position: relative;
             animation: scaleIn 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 150px;
+            background: radial-gradient(ellipse at top, rgba(139, 92, 246, 0.15), transparent);
+            pointer-events: none;
         }
 
         .modal-header {
             padding: 24px 28px;
-            border-bottom: 1px solid var(--border);
+            border-bottom: 1px solid var(--border-glass);
             display: flex;
             justify-content: space-between;
             align-items: center;
+            position: sticky;
+            top: 0;
+            background: rgba(17, 17, 37, 0.9);
+            backdrop-filter: blur(10px);
+            z-index: 10;
         }
 
         .modal-title {
-            font-family: 'Reem Kufi', sans-serif;
+            font-family: var(--font-heading);
             font-size: 1.4rem;
-            color: var(--gold);
+            font-weight: 700;
+            background: var(--gold-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
 
         .modal-close {
-            background: none;
-            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-glass);
             color: var(--text-secondary);
             width: 36px;
             height: 36px;
             border-radius: 10px;
             cursor: pointer;
-            font-size: 1.2rem;
-            transition: all 0.3s;
+            font-size: 1rem;
+            transition: var(--transition-fast);
             display: flex;
             align-items: center;
             justify-content: center;
         }
 
         .modal-close:hover {
-            border-color: var(--gold);
-            color: var(--gold);
+            border-color: var(--gold-400);
+            color: var(--gold-200);
+            background: rgba(139, 92, 246, 0.1);
         }
 
         .modal-body {
@@ -448,12 +515,12 @@
             display: flex;
             justify-content: space-between;
             padding: 12px 0;
-            border-bottom: 1px solid rgba(201, 169, 110, 0.06);
+            border-bottom: 1px solid var(--border-glass);
         }
 
         .detail-label {
             color: var(--text-secondary);
-            font-size: 0.9rem;
+            font-size: 0.95rem;
         }
 
         .detail-value {
@@ -463,41 +530,22 @@
         }
 
         .detail-id {
-            font-family: 'Reem Kufi', monospace;
-            color: var(--gold);
-            background: rgba(201, 169, 110, 0.08);
+            font-family: monospace;
+            color: var(--gold-200);
+            background: rgba(139, 92, 246, 0.1);
             padding: 4px 14px;
             border-radius: 8px;
             letter-spacing: 1px;
-            font-size: 0.88rem;
+            font-size: 0.9rem;
+            border: 1px solid rgba(139, 92, 246, 0.2);
         }
 
-        .photos-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            margin-top: 20px;
-        }
-
-        .photo-thumb {
-            aspect-ratio: 1;
-            border-radius: 10px;
-            overflow: hidden;
-            border: 1px solid var(--border);
-            background: var(--bg-deep);
-        }
-
-        .photo-thumb img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .photo-label {
-            text-align: center;
-            font-size: 0.72rem;
-            color: var(--text-secondary);
-            margin-top: 4px;
+        .story-box {
+            margin-top: 24px;
+            padding: 20px;
+            background: rgba(139, 92, 246, 0.05);
+            border-radius: var(--radius-md);
+            border: 1px solid rgba(139, 92, 246, 0.15);
         }
 
         /* ──────────────────────────────────────────────────
@@ -512,8 +560,8 @@
         .loading-spinner {
             width: 40px;
             height: 40px;
-            border: 3px solid var(--border);
-            border-top-color: var(--gold);
+            border: 3px solid var(--border-glass);
+            border-top-color: var(--gold-400);
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
             margin: 0 auto 16px;
@@ -533,7 +581,7 @@
 
         .empty-text {
             color: var(--text-secondary);
-            font-size: 1rem;
+            font-size: 1.05rem;
         }
 
         /* ──────────────────────────────────────────────────
@@ -599,29 +647,42 @@
                 font-size: 2.4rem;
             }
 
-            .search-box {
+            .hero-search-inner {
                 flex-direction: column;
+                padding: 14px;
+                border-radius: var(--radius-lg);
+            }
+
+            .hero-search-wrapper {
+                border-radius: var(--radius-lg);
+            }
+
+            .hero-search-wrapper::after {
+                border-radius: var(--radius-lg);
+            }
+
+            .search-input {
+                width: 100%;
+                text-align: center;
             }
 
             .search-btn {
+                width: 100%;
                 justify-content: center;
                 padding: 14px;
             }
 
             .stats-bar {
                 gap: 24px;
+                flex-wrap: wrap;
             }
 
             .stat-number {
-                font-size: 1.5rem;
+                font-size: 1.8rem;
             }
 
             .results-grid {
                 grid-template-columns: 1fr;
-            }
-
-            .photos-grid {
-                grid-template-columns: repeat(2, 1fr);
             }
         }
     </style>
@@ -640,18 +701,21 @@
 
         <!-- ═══ البحث ═══ -->
         <section class="search-section">
-            <div class="search-box">
-                <input type="text" class="search-input" id="searchInput"
-                    placeholder="ابحث بالرقم المميز أو اسم القطعة أو اسم المشارك..." autocomplete="off">
-                <button class="search-btn" id="searchBtn" onclick="performSearch()">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-                        stroke-linecap="round">
+            <div class="hero-search-wrapper">
+                <div class="hero-search-inner">
+                    <svg class="search-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="11" cy="11" r="8" />
                         <line x1="21" y1="21" x2="16.65" y2="16.65" />
                     </svg>
-                    بحث
-                </button>
+                    <input type="text" class="search-input" id="searchInput"
+                        placeholder="ابحث بالرقم المميز أو اسم القطعة أو المهتم..." autocomplete="off">
+                    <button class="search-btn" id="searchBtn" onclick="performSearch()">
+                        بحث
+                    </button>
+                </div>
             </div>
+
             <div class="search-filters">
                 <span class="filter-chip active" onclick="setFilter('all', this)">الكل</span>
                 <span class="filter-chip" onclick="setFilter('دلة قهوة', this)">☕ دلة قهوة</span>
@@ -694,7 +758,9 @@
         <div class="modal-content">
             <div class="modal-header">
                 <span class="modal-title" id="modalTitle">تفاصيل القطعة</span>
-                <button class="modal-close" onclick="closeModal()">✕</button>
+                <button class="modal-close" onclick="closeModal()">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
             </div>
             <div class="modal-body" id="modalBody"></div>
         </div>
@@ -727,6 +793,10 @@
         // ═══════════════════════════════════════════════════════
         async function loadData() {
             try {
+                if (typeof SUPABASE_URL === 'undefined' || typeof SUPABASE_ANON_KEY === 'undefined') {
+                    throw new Error("بيانات الاتصال بقاعدة البيانات غير موجودة. تأكد من وجود ملف config.js بشكل صحيح.");
+                }
+
                 const url = `${SUPABASE_URL}/rest/v1/public_items_view?order=id.desc`;
                 const resp = await fetch(url, {
                     headers: {
@@ -735,7 +805,7 @@
                     }
                 });
 
-                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                if (!resp.ok) throw new Error(`خطأ في الاستجابة (HTTP ${resp.status})`);
 
                 allRecords = await resp.json();
 
@@ -752,9 +822,9 @@
                 console.error("خطأ في التحميل:", err);
                 document.getElementById("resultsArea").innerHTML = `
             <div class="empty-state">
-                <div class="empty-icon">⚠️</div>
+                <div class="empty-icon"><i class="fa-solid fa-triangle-exclamation" style="color:var(--gold-300);"></i></div>
                 <div class="empty-text">حصل خطأ في الاتصال بقاعدة البيانات<br>
-                <small style="color:var(--text-secondary);opacity:0.5">${err.message}</small></div>
+                <small style="color:var(--text-muted);opacity:0.8;display:block;margin-top:8px">${err.message}</small></div>
             </div>`;
             }
         }
@@ -810,8 +880,8 @@
             if (records.length === 0) {
                 area.innerHTML = `
             <div class="empty-state">
-                <div class="empty-icon">🔍</div>
-                <div class="empty-text">لا توجد نتائج</div>
+                <div class="empty-icon"><i class="fa-solid fa-magnifying-glass" style="opacity:0.5;"></i></div>
+                <div class="empty-text">لا توجد نتائج مطابقة لبحثك</div>
             </div>`;
                 return;
             }
@@ -828,22 +898,22 @@
                 // عرض أول صورة من المصفوفة
                 const imageUrl = record.photo_urls && record.photo_urls.length > 0 ? record.photo_urls[0] : "";
                 const imageHtml = imageUrl
-                    ? `<img src="${imageUrl}" alt="${name}" onerror="this.parentElement.innerHTML='<div class=\\'placeholder-icon\\'>🏺</div>'">`
-                    : `<div class="placeholder-icon">🏺</div>`;
+                    ? `<img src="${imageUrl}" alt="${name}" onerror="this.parentElement.innerHTML='<div class=\\'placeholder-icon\\'><i class=\\'fa-solid fa-image\\'></i></div>'">`
+                    : `<div class="placeholder-icon"><i class="fa-solid fa-image"></i></div>`;
 
                 html += `
-            <div class="item-card" style="animation-delay:${index * 0.08}s" onclick='showDetails(${JSON.stringify(record).replace(/'/g, "&#39;")})'>
+            <div class="item-card" style="animation-delay:${(index % 10) * 0.08}s" onclick='showDetails(${JSON.stringify(record).replace(/'/g, "&#39;")})'>
                 <div class="card-image">
-                    ${imageHtml}
+                     ${imageHtml}
                     <div class="card-badge">${digitalId}</div>
                 </div>
                 <div class="card-body">
                     <div class="card-type">${type}</div>
                     <div class="card-name">${name}</div>
-                    <div class="card-owner">👤 ${owner}</div>
+                    <div class="card-owner"><i class="fa-regular fa-user" style="color:var(--gold-400)"></i> ${owner}</div>
                 </div>
                 <div class="card-footer">
-                    <span class="card-date">📅 ${date}</span>
+                    <span class="card-date"><i class="fa-regular fa-calendar" style="opacity:0.6"></i> ${date}</span>
                     <span class="card-status status-complete">مكتمل</span>
                 </div>
             </div>`;
@@ -861,7 +931,7 @@
             const title = document.getElementById("modalTitle");
             const body = document.getElementById("modalBody");
 
-            title.textContent = record.item_name || "تفاصيل القطعة";  // textContent آمن تلقائياً
+            title.textContent = record.item_name || "تفاصيل القطعة";
 
             const date = record.created_at ? new Date(record.created_at).toLocaleDateString("ar-SA") : "—";
 
@@ -886,19 +956,23 @@
             // القصة
             if (record.story) {
                 detailsHtml += `
-            <div style="margin-top:20px;padding:16px;background:var(--glow);border-radius:12px;border:1px solid var(--border);">
-                <div style="color:var(--gold);font-weight:600;margin-bottom:8px;">📜 قصة القطعة</div>
-                <div style="color:var(--text-secondary);line-height:1.8;font-size:0.95rem;">${escapeHtml(record.story)}</div>
+            <div class="story-box">
+                <div style="color:var(--gold-300);font-weight:700;font-family:var(--font-heading);margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+                     <i class="fa-solid fa-scroll"></i> قصة القطعة
+                </div>
+                <div style="color:var(--text-secondary);line-height:2;font-size:0.95rem;">${escapeHtml(record.story)}</div>
             </div>`;
             }
 
-            // شبكة الصور الست
+            // شبكة الصور
             if (record.photo_urls && record.photo_urls.length > 0) {
-                detailsHtml += `<div style="margin-top:20px;">
-            <div style="color:var(--gold);font-weight:600;margin-bottom:12px;">📸 صور القطعة (${record.photo_urls.length})</div>
-            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">`;
+                detailsHtml += `<div style="margin-top:24px;">
+            <div style="color:var(--gold-300);font-weight:700;font-family:var(--font-heading);margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+                 <i class="fa-solid fa-camera"></i> صور القطعة (${record.photo_urls.length})
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">`;
                 record.photo_urls.forEach(url => {
-                    detailsHtml += `<img src="${url}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;border:1px solid var(--border);"
+                    detailsHtml += `<img src="${url}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px;border:1px solid var(--border-glass);"
                 onerror="this.style.display='none'">`;
                 });
                 detailsHtml += `</div></div>`;
@@ -913,23 +987,21 @@
         }
 
         // ═══════════════════════════════════════════════════════
-        // ⌨️ البحث بالـ Enter
+        // ⌨️ أحداث الكيبورد
         // ═══════════════════════════════════════════════════════
         document.getElementById("searchInput").addEventListener("keypress", (e) => {
             if (e.key === "Enter") performSearch();
         });
 
-        // إغلاق المودال بالـ Escape
         document.addEventListener("keydown", (e) => {
             if (e.key === "Escape") closeModal();
         });
 
         // ═══════════════════════════════════════════════════════
-        // ▶️ تحميل البيانات عند فتح الصفحة
+        // ▶️ تحميل البيانات عند البداية
         // ═══════════════════════════════════════════════════════
         loadData();
     </script>
-
 </body>
 
 </html>
