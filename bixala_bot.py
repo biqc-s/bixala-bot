@@ -148,16 +148,30 @@ def save_participant(telegram_id, username, name, phone="", city=""):
         return None
 
 
+
+def generate_bix_id():
+    """يولّد رقم مميز بصيغة BIX2026001"""
+    try:
+        year = datetime.now().year
+        count = len(db.table("items").select("id").execute().data)
+        return f"BIX{year}{count + 1:03d}"
+    except Exception as e:
+        logger.error(f"generate_bix_id error: {e}")
+        return f"BIX{datetime.now().year}000"
+
+
 def save_item(participant_id, item_type, item_name, story=""):
     try:
+        bix_id = generate_bix_id()
         res = db.table("items").insert({
             "participant_id": participant_id, "item_type": item_type,
-            "item_name": item_name, "status": "مكتمل", "story": story
+            "item_name": item_name, "status": "مكتمل", "story": story,
+            "bix_id": bix_id
         }).execute()
-        return res.data[0]["id"]
+        return res.data[0]["id"], bix_id
     except Exception as e:
         logger.error(f"save_item error: {e}")
-        return None
+        return None, None
 
 
 def save_photo(item_id, angle, url):
@@ -667,15 +681,16 @@ async def finish(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     photos = context.user_data["photos"]
     participant_id = context.user_data["participant_id"]
 
-    item_id = save_item(participant_id, item_type, item_name, story)
+    item_id, bix_id = save_item(participant_id, item_type, item_name, story)
     for p in photos:
         if p["url"] != "—":
             save_photo(item_id, p["angle"], p["url"])
 
-    log_activity(user.id, "اكتمال_قطعة", f"{item_name} — {len(photos)} صور")
+    log_activity(user.id, "اكتمال_قطعة", f"{item_name} ({bix_id}) — {len(photos)} صور")
 
     await msg.reply_text(
         f"شكرًا لك يا *{name}*، عظيم جدًا 🎉\n\n"
+        f"رقم قطعتك المميز: *{bix_id}* 🏷️\n\n"
         f"ساهمت للتو في حفظ قطعة غالية ({item_name}) من الاندثار.\n"
         f"رفعنا {len([p for p in photos if p['url'] != '—'])} صور واضحة 📸\n"
         f"حفظنا بياناتك وقصتها بأمان ✅\n\n"
