@@ -533,8 +533,9 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
 # ══════════════════════════════════════════════════════════
 async def ask_story(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     item = context.user_data["item_name"]
+    name = context.user_data.get("name", "")
     await update.message.reply_text(
-        f"📖 *نوّرتنا يا {item}!*\n\n"
+        f"📖 *نوّرتنا يا {name}!*\n\n"
         "الآن جاء وقت القصة.. ما الذي يجعلك مميزاً؟\n"
         "• كم عمرك تقريباً؟ من أين جئت؟\n"
         "• هل لديك ذكرى خاصة مع العائلة؟\n\n"
