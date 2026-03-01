@@ -1,34 +1,195 @@
-<div align="center">
+# Bixala Bot — بِكسلة
 
-بِكسلة — Bixala Bot
-
-**حفظ الإرث العائلي رقمياً**
-
-بوت تليجرام ذكي لجمع وتوثيق المقتنيات التراثية السعودية
-
-[![Python](https://img.shields.io/badge/Python-3.11-blue?logo=python)](https://python.org)
-[![Telegram Bot](https://img.shields.io/badge/Telegram-Bot-26A5E4?logo=telegram)](https://core.telegram.org/bots)
-[![Supabase](https://img.shields.io/badge/Database-Supabase-3ECF8E?logo=supabase)](https://supabase.com)
-[![Deploy on Railway](https://img.shields.io/badge/Deploy-Railway-0B0D0E?logo=railway)](https://railway.app)
-
-</div>
+مشروع بوت تيليجرام ذكي لجمع وتوثيق المقتنيات التراثية السعودية.
+يقوم البوت بجمع بيانات المشارك وصور القطعة التراثية من 6 زوايا، ثم يستخدم الذكاء الاصطناعي (GPT) لصياغة قصة القطعة. البيانات تحفظ في Supabase والصور ترفع على Cloudinary.
 
 
-هيكل المشروع
+## فكرة المشروع
+
+بِكسلة يحول القطع التراثية العائلية الى تجارب تفاعلية وواقع معزز (AR).
+المشارك يرسل صور قطعته التراثية عبر البوت، ويكتب قصتها او يستخدم الذكاء الاصطناعي لصياغتها.
+بعدها الفريق التقني يحول الصور الى مجسم ثلاثي الابعاد (3D).
+
+
+## هيكل المشروع
 
 ```
 bixala-bot/
-├── bixala_bot.py       # البوت الرئيسي
-├── search.html         # صفحة بحث القطع
-├── config.example.js   # نموذج إعدادات البحث
-├── requirements.txt    # المكتبات
-├── runtime.txt         # إصدار Python
-├── Procfile            # إعدادات Railway
-└── .gitignore          # الملفات المستبعدة
+  bixala_bot.py       -- البوت الرئيسي (تيليجرام + GPT + قاعدة البيانات)
+  server.py           -- سيرفر Flask لصفحة البحث (يحقن اعدادات Supabase)
+  search.html         -- صفحة بحث القطع التراثية (واجهة ويب)
+  config.example.js   -- نموذج اعدادات البحث (للتطوير المحلي)
+  requirements.txt    -- مكتبات بايثون المطلوبة
+  runtime.txt         -- اصدار بايثون (3.11.11)
+  Procfile            -- اعدادات تشغيل Railway
+  .env.example        -- نموذج متغيرات البيئة المطلوبة
+  .gitignore          -- الملفات المستبعدة من Git
 ```
 
+
+## البوت الرئيسي — bixala_bot.py
+
+هذا هو الملف الاساسي ويحتوي على كل منطق البوت:
+
+### رحلة المستخدم خطوة بخطوة
+
+```
+1. المستخدم يرسل /start او اي رسالة
+2. تظهر القائمة الرئيسية (تسجيل قطعة / دعم فني / الغاء)
+3. اذا اختار تسجيل قطعة:
+   أ. يدخل كلمة السر
+   ب. يكتب اسمه الكامل
+   ج. يدخل رقم جواله
+   د. يختار نوع القطعة من قائمة (دلة، مبخرة، سجادة، خنجر، اواني، ملابس، حلي، ادوات، اخرى)
+   هـ. يرسل 6 صور من زوايا مختلفة (امام، خلف، يمين، يسار، اعلى، تفاصيل)
+   و. يكتب قصة القطعة بنفسه او يستخدم الذكاء الاصطناعي
+   ز. تظهر رسالة شكر مع الرقم المميز (مثال: BIX2026001)
+   ح. المحادثة تنتهي
+```
+
+### الوكيل الذكي (GPT)
+
+البوت يستخدم OpenAI GPT لصياغة قصص القطع التراثية.
+المستخدم يعطيه معلومات بسيطة (عمر القطعة، مصدرها، ذكريات) والذكاء الاصطناعي يصيغها كقصة دافئة تصلح للتعليق الصوتي في معرض فني.
+يمكن للمستخدم اعادة الصياغة او كتابة القصة بنفسه.
+
+### الرقم المميز (BIX ID)
+
+كل قطعة تحصل على رقم مميز بصيغة: BIX + السنة + رقم تسلسلي (3 خانات)
+مثال: BIX2026001, BIX2026002, BIX2026003
+
+### اوامر الادمن
+
+```
+/stats        -- عرض احصائيات (عدد المشاركين، القطع، الصور)
+/participants -- عرض اخر 20 مشارك
+/item [رقم]  -- عرض تفاصيل قطعة معينة
+/export       -- تصدير كل البيانات كملفات CSV
+/myid         -- معرفة رقم حسابك لاضافته كادمن
+```
+
+
+## صفحة البحث — search.html + server.py
+
+صفحة ويب تعرض القطع التراثية المسجلة وتسمح بالبحث فيها.
+السيرفر (server.py) مبني على Flask ويحقن اعدادات Supabase من متغيرات البيئة في الصفحة.
+
+
+## قاعدة البيانات — Supabase
+
+المشروع يستخدم 4 جداول في Supabase:
+
+### جدول participants (المشاركين)
+
+| العمود             | النوع        | الوصف                    |
+|--------------------|-------------|--------------------------|
+| id                 | int8        | رقم تسلسلي تلقائي        |
+| telegram_id        | int8        | رقم حساب تيليجرام        |
+| telegram_username  | text        | يوزرنيم تيليجرام         |
+| name               | text        | اسم المشارك              |
+| phone              | text        | رقم الجوال                |
+| city               | text        | المدينة                   |
+| created_at         | timestamptz | تاريخ التسجيل            |
+
+### جدول items (القطع التراثية)
+
+| العمود          | النوع        | الوصف                    |
+|-----------------|-------------|--------------------------|
+| id              | int8        | رقم تسلسلي تلقائي        |
+| bix_id          | text        | الرقم المميز (BIX2026001)|
+| participant_id  | int8        | رقم المشارك              |
+| item_type       | text        | نوع القطعة                |
+| item_name       | text        | اسم القطعة                |
+| story           | text        | قصة القطعة                |
+| status          | text        | الحالة                    |
+| created_at      | timestamptz | تاريخ الاضافة            |
+
+### جدول photos (الصور)
+
+| العمود       | النوع        | الوصف                    |
+|-------------|-------------|--------------------------|
+| id          | int8        | رقم تسلسلي تلقائي        |
+| item_id     | int8        | رقم القطعة                |
+| angle       | text        | زاوية التصوير             |
+| url         | text        | رابط الصورة على Cloudinary|
+| uploaded_at | timestamptz | تاريخ الرفع              |
+
+### جدول activity_log (سجل الاحداث)
+
+| العمود       | النوع        | الوصف                    |
+|-------------|-------------|--------------------------|
+| id          | int8        | رقم تسلسلي تلقائي        |
+| telegram_id | int8        | رقم حساب تيليجرام        |
+| action      | text        | نوع الحدث                 |
+| details     | text        | تفاصيل اضافية             |
+| timestamp   | timestamptz | التوقيت                   |
+
+### العلاقات بين الجداول
+
+```
+participants ---(participant_id)---> items ---(item_id)---> photos
+participants ---(telegram_id)------> activity_log
+```
+
+
+## الخدمات الخارجية
+
+| الخدمة      | الغرض                                | الرابط                    |
+|------------|--------------------------------------|--------------------------|
+| Telegram   | واجهة البوت                          | core.telegram.org/bots   |
+| Supabase   | قاعدة البيانات                       | supabase.com             |
+| Cloudinary | تخزين الصور                          | cloudinary.com           |
+| OpenAI     | الذكاء الاصطناعي (صياغة القصص)        | platform.openai.com      |
+| Railway    | استضافة وتشغيل البوت والسيرفر        | railway.app              |
+
+
+## متغيرات البيئة المطلوبة
+
+انظر ملف .env.example للقائمة الكاملة. هذه المتغيرات تضبط في Railway كـ Environment Variables:
+
+```
+BOT_TOKEN            -- توكن بوت تيليجرام (من BotFather)
+BOT_PASSWORD         -- كلمة السر لدخول البوت
+OPENAI_API_KEY       -- مفتاح OpenAI
+OPENAI_MODEL         -- موديل GPT (الافتراضي: gpt-4o-mini)
+ADMIN_ID             -- ارقام حسابات الادمن مفصولة بفاصلة
+SUPPORT_USERNAME     -- يوزرنيم الدعم الفني
+SUPABASE_URL         -- رابط مشروع Supabase
+SUPABASE_KEY         -- مفتاح Supabase (service role او anon)
+SUPABASE_ANON_KEY    -- مفتاح Supabase العام (لصفحة البحث)
+CLOUDINARY_CLOUD_NAME -- اسم حساب Cloudinary
+CLOUDINARY_API_KEY    -- مفتاح Cloudinary
+CLOUDINARY_API_SECRET -- سر Cloudinary
+```
+
+
+## التشغيل المحلي
+
+```bash
+# 1. تثبيت المكتبات
+pip install -r requirements.txt
+
+# 2. ضبط متغيرات البيئة
+# انسخ .env.example الى .env واملأ القيم
+
+# 3. تشغيل البوت
+python bixala_bot.py
+
+# 4. تشغيل سيرفر البحث (اختياري)
+python server.py
+```
+
+
+## النشر على Railway
+
+المشروع منشور على Railway كخدمتين:
+
+1. خدمة البوت (worker): تشغل bixala_bot.py عبر Procfile
+2. خدمة السيرفر (web): تشغل server.py لصفحة البحث
+
+عند عمل push الى GitHub، Railway يعمل deploy تلقائي.
+
+
 ---
-
-
 
 هذا المشروع للاستخدام الخاص. جميع الحقوق محفوظة.
