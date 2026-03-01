@@ -594,12 +594,21 @@ async def ai_story_start_callback(update: Update, context: ContextTypes.DEFAULT_
 
 async def get_ai_story_input(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user = update.effective_user
-    user_details = update.message.text.strip()
+    # نحصل على كائن الرسالة سواء جاء من نص أو من callback
+    msg = update.message or update.callback_query.message
+    user_details = ""
+
+    if update.message:
+        user_details = update.message.text.strip()
+        context.user_data["ai_story_details"] = user_details  # نحفظها للإعادة
+    else:
+        user_details = context.user_data.get("ai_story_details", "")
+
     item_name = context.user_data["item_name"]
     item_type = context.user_data.get("item_type", item_name)
     
     log_activity(user.id, "معلومات_قصة_الذكاء", user_details[:50])
-    await update.message.chat.send_action("typing")
+    await msg.chat.send_action("typing")
     
     # رسالة مخصصة لطلب القصة من OpenAI
     prompt = (
@@ -611,7 +620,7 @@ async def get_ai_story_input(update: Update, context: ContextTypes.DEFAULT_TYPE)
     story_result = ask_gpt(prompt, [])  # نمرر تاريخ فارغ لأنها تعليمة مباشرة
     context.user_data["ai_generated_story"] = story_result
     
-    await update.message.reply_text(
+    await msg.reply_text(
         f"✨ *إليك ما صغته لك:*\n\n"
         f"_{story_result}_\n\n"
         "كيف تراها؟",
@@ -638,10 +647,9 @@ async def ai_story_confirm_callback(update: Update, context: ContextTypes.DEFAUL
     elif choice == "ai_story_retry":
         log_activity(user.id, "إعادة_صياغة_قصة")
         await query.message.reply_text("⏳ جاري كتابة صياغة جديدة، لحظات...")
-        return await get_ai_story_input(update, context) # Re-run generation with same input
+        return await get_ai_story_input(update, context)  # يستخدم التفاصيل المحفوظة
         
     elif choice == "ai_story_manual":
-        # إعادة توجيه لكتابة القصة يدوياً
         log_activity(user.id, "تراجع_عن_الذكاء")
         await query.message.reply_text(
             "✍️ حسناً، خذ وقتك واكتب القصة بأسلوبك الآن:"
@@ -684,10 +692,10 @@ async def finish(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         f"لقد ساهمت للتو في حفظ قطعة غالية ({item_name}) من الاندثار.\n"
         f"📸 رفعنا {len([p for p in photos if p['url'] != '—'])} صور واضحة.\n"
         f"✅ وحفظنا بياناتك وقصتها بأمان.\n\n"
-        "**ما هو التالي؟**\n"
-        "فريقنا التقني سيبدأ الآن بتحويل صورك إلى مجسم ثلاثي الأبعاد (3D) لتكون جاهزة قريباً لعدسات الواقع المعزز لتراها تتجسد أمامك وتسمع قصتها التي صغناها معاً! 🪄\n\n"
-        "─────────────────\n📋 *روابط صورك المرفوعة (للاحتفاظ بها):*\n\n{links_text}"
-        "─────────────────",
+        f"*ما هو التالي؟*\n"
+        f"فريقنا التقني سيبدأ الآن بتحويل صورك إلى مجسم ثلاثي الأبعاد (3D) لتكون جاهزة قريباً لعدسات الواقع المعزز لتراها تتجسد أمامك وتسمع قصتها التي صغناها معاً! 🪄\n\n"
+        f"─────────────────\n📋 *روابط صورك المرفوعة (للاحتفاظ بها):*\n\n{links_text}"
+        f"─────────────────",
         parse_mode="Markdown",
     )
     await msg.reply_text(f"📎 روابط سريعة للنسخ: \n\n{all_urls}")
