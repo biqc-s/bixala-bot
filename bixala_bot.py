@@ -97,7 +97,7 @@ ITEM_TYPES = [
 # 📸 الزوايا الست
 # ──────────────────────────────────────────────────────────
 PHOTO_STEPS = [
-    {"num": "١/٦", "angle": "من الأمام 🔲", "instruction": "صوّر القطعة من الأمام مباشرة.\n💡 خلّ الإضاءة واضحة والخلفية بسيطة."},
+    {"num": "١/٦", "angle": "من الأمام 🔲", "instruction": "صوّر القطعة من الأمام مباشرة.\nخلّ الإضاءة واضحة والخلفية بسيطة 💡"},
     {"num": "٢/٦", "angle": "من الخلف 🔳", "instruction": "أدر القطعة وصوّرها من الخلف."},
     {"num": "٣/٦", "angle": "من الجانب الأيمن ➡️", "instruction": "صوّرها من الجانب الأيمن."},
     {"num": "٤/٦", "angle": "من الجانب الأيسر ⬅️", "instruction": "صوّرها من الجانب الأيسر."},
@@ -109,16 +109,16 @@ PHOTO_STEPS = [
 # 🤖 رسالة النظام للوكيل الذكي — شخصيته وتعليماته
 # 💡 تستخدم المقتطفات فقط لكتابة القصص ولا يتاح المحادثة العامة معه
 # ──────────────────────────────────────────────────────────
-AI_SYSTEM_PROMPT = """أنت "بِكسل" 🤖 الوكيل الذكي لمشروع بِكسلة.
+AI_SYSTEM_PROMPT = """أنت "بِكسل" الوكيل الذكي لمشروع بِكسلة 🤖
 
-مهمتك وحيدة فقط:
-تأليف قصة أو وصف دافئ، عاطفي ومناسب لتراث المملكة وثقافتها بلهجة مفهومة، بناءً على المعلومات البسيطة التي سيعطيك إياها المشارك عن قطعته التراثية (كعمرها، مصدرها، أصحابها).
+مهمتك الوحيدة:
+تأليف قصة قصيرة أو وصف دافئ وعاطفي يناسب تراث المملكة وثقافتها، بناءً على المعلومات التي يقدمها المشارك عن قطعته التراثية مثل عمرها ومصدرها وأصحابها.
 
-شروط مهمة جداً:
-١. يجب أن تكون القصة مصاغة كـ "راوي" وتناسب جداً أن تُقرأ كتعليق صوتي (Audio Narration) في معرض فني أو تجربة واقع افتراضي.
-٢. النبرة دافئة وقريبة من القلب، وتعكس مشاعر الحنين وقيم الكرم والأصالة.
-٣. لا تتجاوز ٣ إلى ٤ أسطر كحد أقصى! كن مختصراً ومؤثراً.
-٤. اكتب باللغة العربية الواضحة المفهومة (فصحى مطعمة بروح اللهجة السعودية إن أمكن دون تعقيد)."""
+الشروط:
+١. القصة تُكتب بأسلوب الراوي بحيث تصلح للتعليق الصوتي في معرض فني أو تجربة واقع افتراضي.
+٢. النبرة دافئة وقريبة من القلب، تعكس مشاعر الحنين وقيم الكرم والأصالة.
+٣. لا تتجاوز ٣ إلى ٤ أسطر كحد أقصى. اختصر وأثّر.
+٤. اكتب بالعربية الفصحى الواضحة مع لمسة من روح اللهجة السعودية دون تعقيد."""
 
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -247,11 +247,11 @@ def ask_gpt(user_message: str, chat_history: list) -> str:
             return data["choices"][0]["message"]["content"]
         else:
             logger.error(f"OpenAI error {resp.status_code}: {resp.text}")
-            return "عذرًا، حصل خطأ تقني. حاول مرة ثانية 🙏"
+            return "عذرًا، حصل خطأ تقني.. حاول مرة ثانية 🙏"
 
     except Exception as e:
         logger.error(f"OpenAI exception: {e}")
-        return "عذرًا، حصل خطأ في الاتصال. حاول مرة ثانية 🙏"
+        return "عذرًا، حصل خطأ في الاتصال.. حاول مرة ثانية 🙏"
 
 
 # ══════════════════════════════════════════════════════════
@@ -260,20 +260,20 @@ def ask_gpt(user_message: str, chat_history: list) -> str:
 def main_menu_keyboard():
     """ترجع أزرار القائمة الرئيسية (Inline Keyboard)."""
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("📸 تسجيل قطعة تراثية", callback_data="register_item")],
-        [InlineKeyboardButton("📞 التواصل مع الدعم الفني", callback_data="support")],
-        [InlineKeyboardButton("❌ إلغاء", callback_data="cancel")],
+        [InlineKeyboardButton("تسجيل قطعة تراثية 📸", callback_data="register_item")],
+        [InlineKeyboardButton("التواصل مع الدعم الفني 📞", callback_data="support")],
+        [InlineKeyboardButton("إلغاء ✖️", callback_data="cancel")],
     ])
 
 
 async def show_main_menu(message, name=""):
     """ترسل القائمة الرئيسية."""
-    greeting = f"أهلاً *{name}*! " if name else ""
+    greeting = f"أهلاً *{name}* " if name else ""
     await message.reply_text(
-        f"✨ {greeting}مرحباً بك في *بِكسلة*\n\n"
-        "حيث نجمع الماضي لنحفظه للمستقبل 🏺\n"
-        "من خلال تحويل القطع التراثية العائلية إلى تجارب تفاعلية وواقع معزز (AR).\n\n"
-        "كيف يمكننا مساعدتك اليوم؟ 👇",
+        f"{greeting}مرحباً بك في *بِكسلة* ✨\n\n"
+        "نجمع الماضي لنحفظه للمستقبل 🏺\n"
+        "نحوّل القطع التراثية العائلية إلى تجارب تفاعلية وواقع معزز.\n\n"
+        "كيف نقدر نساعدك اليوم؟ 👇",
         parse_mode="Markdown",
         reply_markup=main_menu_keyboard(),
     )
@@ -304,7 +304,7 @@ async def check_password(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if entered == BOT_PASSWORD:
         log_activity(user.id, "كلمة_سر_صحيحة")
         await update.message.reply_text(
-            "✅ تم التحقق بنجاح!\n\n📝 *أرسل لي اسمك الكامل:*",
+            "تم التحقق بنجاح ✅\n\nأرسل لي اسمك الكامل 📝",
             parse_mode="Markdown",
         )
         return NAME
@@ -314,13 +314,13 @@ async def check_password(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     if context.user_data["attempts"] >= 3:
         log_activity(user.id, "تم_الحظر", "٣ محاولات فاشلة")
-        await update.message.reply_text("🚫 تم تجاوز عدد المحاولات.\nتواصل مع فريق بِكسلة للحصول على كلمة السر.")
+        await update.message.reply_text("تم تجاوز عدد المحاولات 🚫\nتواصل مع فريق بِكسلة للحصول على كلمة السر.")
         await show_main_menu(update.message)
         return MAIN_MENU
 
     remaining = 3 - context.user_data["attempts"]
     await update.message.reply_text(
-        f"❌ كلمة السر غير صحيحة.\nمتبقي *{remaining}* محاولات.\n\n🔐 *أدخل كلمة السر:*",
+        f"كلمة السر غير صحيحة ✖️\nمتبقي *{remaining}* محاولات.\n\nأدخل كلمة السر 🔐",
         parse_mode="Markdown",
     )
     return PASSWORD
@@ -340,7 +340,7 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         log_activity(user.id, "بدء_تسجيل_قطعة")
         context.user_data["attempts"] = 0
         await query.message.reply_text(
-            "🔐 *أدخل كلمة السر للمتابعة:*",
+            "أدخل كلمة السر للمتابعة 🔐",
             parse_mode="Markdown",
         )
         return PASSWORD
@@ -353,7 +353,7 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         else:
             support_text = "أرسل استفسارك هنا وسيتواصل معك فريقنا في أقرب وقت."
         await query.message.reply_text(
-            f"📞 *الدعم الفني*\n\n{support_text}\n\n📋 للرجوع للقائمة أرسل: /menu",
+            f"الدعم الفني 📞\n\n{support_text}\n\nللرجوع للقائمة أرسل: /menu",
             parse_mode="Markdown",
         )
         return MAIN_MENU
@@ -362,7 +362,7 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     elif choice == "cancel":
         log_activity(user.id, "إلغاء_من_القائمة")
         await query.message.reply_text(
-            "شكرًا لزيارتك بِكسلة! 🙏✨\nتقدر ترجع بإرسال أي رسالة.",
+            "شكرًا لزيارتك بِكسلة 🙏✨\nتقدر ترجع بإرسال أي رسالة.",
         )
         return ConversationHandler.END
 
@@ -387,8 +387,8 @@ async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     log_activity(user.id, "تسجيل_اسم", name)
 
     await update.message.reply_text(
-        f"تشرفنا فيك يا *{name}*! 👋\n\n"
-        "لنبقى على تواصل بعد رفع القطعة، \n📱 *الرجاء إدخال رقم جوالك:*\n"
+        f"تشرفنا فيك يا *{name}* 👋\n\n"
+        "عشان نبقى على تواصل بعد رفع القطعة\nالرجاء إدخال رقم جوالك 📱\n"
         "_(مثال: 0512345678)_",
         parse_mode="Markdown",
         reply_markup=ReplyKeyboardRemove(),
@@ -403,8 +403,8 @@ async def get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
     if not (digits.isdigit() and 8 <= len(digits) <= 15):
         await update.message.reply_text(
-            "⚠️ رقم الجوال غير صحيح.\n\n"
-            "📱 *أدخل رقم جوالك:*\nمثال: 0512345678",
+            "رقم الجوال غير صحيح ⚠️\n\n"
+            "أدخل رقم جوالك 📱\nمثال: 0512345678",
             parse_mode="Markdown",
         )
         return PHONE
@@ -414,7 +414,7 @@ async def get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     log_activity(user.id, "تسجيل_جوال", digits[:4] + "***")
 
     await update.message.reply_text(
-        f"ممتاز!\n\n🏺 *والآن يا {name}، حدد ما هو نوع القطعة التراثية التي تود توثيقها اليوم؟*",
+        f"ممتاز\n\nوالآن يا *{name}*، حدد نوع القطعة التراثية اللي تبي توثّقها اليوم 🏺",
         parse_mode="Markdown",
         reply_markup=ReplyKeyboardMarkup(ITEM_TYPES, one_time_keyboard=True,
                                          resize_keyboard=True, input_field_placeholder="اختر نوع القطعة..."),
@@ -431,7 +431,7 @@ async def get_item_type(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
 
     if "أخرى" in chosen:
         await update.message.reply_text(
-            "📝 *اكتب اسم القطعة التراثية:*\nمثال: مفتاح قديم، صندوق خشبي...",
+            "اكتب اسم القطعة التراثية 📝\nمثال: مفتاح قديم، صندوق خشبي...",
             parse_mode="Markdown", reply_markup=ReplyKeyboardRemove(),
         )
         return ITEM_NAME
@@ -474,15 +474,15 @@ async def ask_first_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     # ملخص المعلومات قبل البدء بالتصوير
     await update.message.reply_text(
-        f"✅ *معلومات ممتازة!*\n\n"
-        f"👤 المشارك: *{name}*\n"
-        f"🏺 القطعة: *{item}*\n"
-        f"📂 النوع: *{item_type}*\n\n"
+        f"معلومات ممتازة ✅\n\n"
+        f"المشارك: *{name}* 👤\n"
+        f"القطعة: *{item}* 🏺\n"
+        f"النوع: *{item_type}* 📂\n\n"
         "─────────────────\n"
-        "💡 *وصلنا لأهم وأمتع جزء، التصوير 📸*\n"
-        "أهم نصيحة: الإضاءة الطبيعية هي الأفضل، ولا تستخدم الفلاش!\n"
+        "وصلنا لأهم وأمتع جزء، التصوير 📸\n"
+        "أهم نصيحة: الإضاءة الطبيعية هي الأفضل، ولا تستخدم الفلاش 💡\n"
         "─────────────────\n\n"
-        f"📸 *الصورة {step['num']} — {step['angle']}*\n"
+        f"الصورة *{step['num']}* — {step['angle']} 📸\n"
         f"{photo_progress(0)}\n\n"
         f"{step['instruction']}",
         parse_mode="Markdown", reply_markup=ReplyKeyboardRemove(),
@@ -497,13 +497,13 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     file = await photo.get_file()
     file_bytes = await file.download_as_bytearray()
 
-    await update.message.reply_text("⏳ جاري رفع الصورة...")
+    await update.message.reply_text("جاري رفع الصورة.. ⏳")
     link = upload_to_cloudinary(bytes(file_bytes))
 
     if not link:
         log_activity(user.id, "خطأ_رفع", PHOTO_STEPS[current_step]["angle"])
         await update.message.reply_text(
-            "❌ حصل خطأ أثناء رفع الصورة.\nأرسلها مرة ثانية."
+            "حصل خطأ أثناء رفع الصورة ✖️\nأرسلها مرة ثانية."
         )
         return PHOTO_1 + current_step
 
@@ -513,16 +513,16 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
 
     if done >= 6:
         await update.message.reply_text(
-            f"✅ *اكتملت الصور!*\n{photo_progress(6)}  ٦/٦\n\n"
-            "ممتاز، تم رفع جميع الصور الست بنجاح! 🎉",
+            f"اكتملت الصور ✅\n{photo_progress(6)}  ٦/٦\n\n"
+            "ممتاز، تم رفع جميع الصور الست بنجاح 🎉",
             parse_mode="Markdown",
         )
         return await ask_story(update, context)
 
     ns = PHOTO_STEPS[current_step + 1]
     await update.message.reply_text(
-        f"✅ تم رفع الصورة {done}/٦\n{photo_progress(done)}\n\n"
-        f"📸 *الصورة {ns['num']} — {ns['angle']}*\n{ns['instruction']}",
+        f"تم رفع الصورة {done}/٦ ✅\n{photo_progress(done)}\n\n"
+        f"الصورة *{ns['num']}* — {ns['angle']} 📸\n{ns['instruction']}",
         parse_mode="Markdown",
     )
     return PHOTO_1 + current_step + 1
@@ -535,15 +535,14 @@ async def ask_story(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     item = context.user_data["item_name"]
     name = context.user_data.get("name", "")
     await update.message.reply_text(
-        f"📖 *نوّرتنا يا {name}!*\n\n"
-        "الآن جاء وقت القصة.. ما الذي يجعلك مميزاً؟\n"
-        "• كم عمرك تقريباً؟ من أين جئت؟\n"
-        "• هل لديك ذكرى خاصة مع العائلة؟\n\n"
-        "✍️ اكتب قصتها بأسلوبك (أو استخدم الذكاء الاصطناعي ليساعدك في صياغتها):",
+        f"نوّرتنا يا *{name}* 📖\n\n"
+        f"الحين جاء وقت القصة.. خلّنا نعرف أكثر عن *{item}*:\n"
+        "• كم عمرها تقريبًا؟ ومن وين جاتكم؟\n"
+        "• هل لها ذكرى خاصة مع العائلة؟\n\n"
+        "اكتب قصتها بأسلوبك، أو استخدم الذكاء الاصطناعي ليساعدك في صياغتها ✍️",
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("🤖 دع الذكاء الاصطناعي يساعدك (ينصح به للملف الصوتي)", callback_data="ai_help_story")],
-            [InlineKeyboardButton("⏭️ لا توجد تفاصيل (تخطي)", callback_data="skip_story")]
+            [InlineKeyboardButton("دع الذكاء الاصطناعي يساعدك (ينصح به للملف الصوتي) 🤖", callback_data="ai_help_story")]
         ]),
     )
     return STORY
@@ -557,22 +556,15 @@ async def get_story(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     return await finish(update, context)
 
 
-async def skip_story_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    query = update.callback_query
-    await query.answer()
-    context.user_data["story"] = ""
-    log_activity(update.effective_user.id, "تخطي_قصة")
-    return await finish(update, context)
 
 
 async def wrong_input_story(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await update.message.reply_text(
-        "⚠️ أحتاج *نص مكتوب* لقصة القطعة!\n\n"
-        "✍️ اكتب القصة، أو اختر أحد الخيارات:",
+        "أحتاج *نص مكتوب* لقصة القطعة ⚠️\n\n"
+        "اكتب القصة، أو اختر أحد الخيارات ✍️",
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("🤖 دع الذكاء الاصطناعي يساعدك", callback_data="ai_help_story")],
-            [InlineKeyboardButton("⏭️ لا توجد تفاصيل (تخطي)", callback_data="skip_story")]
+            [InlineKeyboardButton("دع الذكاء الاصطناعي يساعدك 🤖", callback_data="ai_help_story")]
         ]),
     )
     return STORY
@@ -586,9 +578,9 @@ async def ai_story_start_callback(update: Update, context: ContextTypes.DEFAULT_
     await query.answer()
     
     await query.message.reply_text(
-        "🤖 *أهلاً بك في مساعد القصة الذكي!*\n\n"
-        "لا تقلق بشأن التعبير، فقط أعطني بعض الكلمات الدلالية أو التفاصيل العشوائية التي تعرفها عن القطعة، وسأقوم أنا بصياغتها كقصة دافئة تصلح للتعليق الصوتي.\n\n"
-        "📝 *اكتب كل ما تعرفه الآن (مثال: من ٧٠ سنة، كان يستخدمها جدي في مزرعته في أبها، غالية علينا)...*",
+        "أهلاً بك في مساعد القصة الذكي 🤖\n\n"
+        "لا تقلق بشأن التعبير، فقط أعطني بعض الكلمات أو التفاصيل اللي تعرفها عن القطعة، وأنا بصيغها كقصة دافئة تصلح للتعليق الصوتي.\n\n"
+        "اكتب كل ما تعرفه الآن 📝\n_(مثال: من ٧٠ سنة، كان يستخدمها جدي في مزرعته في أبها، غالية علينا)_",
         parse_mode="Markdown"
     )
     return AI_STORY_INPUT
@@ -613,23 +605,23 @@ async def get_ai_story_input(update: Update, context: ContextTypes.DEFAULT_TYPE)
     
     # رسالة مخصصة لطلب القصة من OpenAI
     prompt = (
-        f"أنا المشارك، ولدي قطعة تراثية من نوع: '{item_type}' واسمها التراثي: '{item_name}'.\n"
-        f"وهذه هي المعلومات المبعثرة التي أعرفها عنها: '{user_details}'.\n\n"
-        "اكتب لي الآن قصة هذه القطعة بناءً على الشروط الموجودة في النظام (دافئة، راوي، مجهزة للصوت، ٣-٤ أسطر)."
+        f"لدي قطعة تراثية نوعها '{item_type}' واسمها '{item_name}'.\n"
+        f"هذه المعلومات التي أعرفها عنها: '{user_details}'.\n\n"
+        "اكتب قصة هذه القطعة بناءً على الشروط المحددة في النظام: دافئة، بأسلوب الراوي، تصلح للتعليق الصوتي، من ٣ إلى ٤ أسطر."
     )
     
     story_result = ask_gpt(prompt, [])  # نمرر تاريخ فارغ لأنها تعليمة مباشرة
     context.user_data["ai_generated_story"] = story_result
     
     await msg.reply_text(
-        f"✨ *إليك ما صغته لك:*\n\n"
+        f"هذي القصة اللي صغتها لك ✨\n\n"
         f"_{story_result}_\n\n"
-        "كيف تراها؟",
+        "كيف تشوفها؟",
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("✅ اعتماد القصة", callback_data="ai_story_accept")],
-            [InlineKeyboardButton("🔄 إعادة صياغة بأسلوب مختلف", callback_data="ai_story_retry")],
-            [InlineKeyboardButton("✏️ سأكتبها بنفسي بدلاً من ذلك", callback_data="ai_story_manual")]
+            [InlineKeyboardButton("اعتماد القصة ✅", callback_data="ai_story_accept")],
+            [InlineKeyboardButton("إعادة صياغة بأسلوب مختلف 🔄", callback_data="ai_story_retry")],
+            [InlineKeyboardButton("سأكتبها بنفسي ✏️", callback_data="ai_story_manual")]
         ]),
     )
     return AI_STORY_CONFIRM
@@ -647,13 +639,13 @@ async def ai_story_confirm_callback(update: Update, context: ContextTypes.DEFAUL
         
     elif choice == "ai_story_retry":
         log_activity(user.id, "إعادة_صياغة_قصة")
-        await query.message.reply_text("⏳ جاري كتابة صياغة جديدة، لحظات...")
+        await query.message.reply_text("جاري كتابة صياغة جديدة، لحظات.. ⏳")
         return await get_ai_story_input(update, context)  # يستخدم التفاصيل المحفوظة
         
     elif choice == "ai_story_manual":
         log_activity(user.id, "تراجع_عن_الذكاء")
         await query.message.reply_text(
-            "✍️ حسناً، خذ وقتك واكتب القصة بأسلوبك الآن:"
+            "حسنًا، خذ وقتك واكتب القصة بأسلوبك الآن ✍️"
         )
         return STORY
 
@@ -682,24 +674,15 @@ async def finish(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
     log_activity(user.id, "اكتمال_قطعة", f"{item_name} — {len(photos)} صور")
 
-    story_line = f"\n📖 *القصة:* {story}\n" if story else ""
-    links_text = ""
-    for i, p in enumerate(photos, 1):
-        links_text += f"{i}. {p['angle']}\n🔗 {p['url']}\n\n"
-    all_urls = "\n".join([p["url"] for p in photos if p["url"] != "—"])
-
     await msg.reply_text(
-        f"🎉 *شكراً لك يا {name}، عظيم جداً!*\n\n"
-        f"لقد ساهمت للتو في حفظ قطعة غالية ({item_name}) من الاندثار.\n"
-        f"📸 رفعنا {len([p for p in photos if p['url'] != '—'])} صور واضحة.\n"
-        f"✅ وحفظنا بياناتك وقصتها بأمان.\n\n"
-        f"*ما هو التالي؟*\n"
-        f"فريقنا التقني سيبدأ الآن بتحويل صورك إلى مجسم ثلاثي الأبعاد (3D) لتكون جاهزة قريباً لعدسات الواقع المعزز لتراها تتجسد أمامك وتسمع قصتها التي صغناها معاً! 🪄\n\n"
-        f"─────────────────\n📋 *روابط صورك المرفوعة (للاحتفاظ بها):*\n\n{links_text}"
-        f"─────────────────",
+        f"شكرًا لك يا *{name}*، عظيم جدًا 🎉\n\n"
+        f"ساهمت للتو في حفظ قطعة غالية ({item_name}) من الاندثار.\n"
+        f"رفعنا {len([p for p in photos if p['url'] != '—'])} صور واضحة 📸\n"
+        f"حفظنا بياناتك وقصتها بأمان ✅\n\n"
+        f"*ما التالي؟*\n"
+        f"فريقنا التقني سيبدأ الآن بتحويل صورك إلى مجسم ثلاثي الأبعاد (3D) لتكون جاهزة قريبًا لعدسات الواقع المعزز، تشوفها تتجسد أمامك وتسمع قصتها اللي صغناها معًا 🪄",
         parse_mode="Markdown",
     )
-    await msg.reply_text(f"📎 روابط سريعة للنسخ: \n\n{all_urls}")
 
     await show_main_menu(msg, name)
     return MAIN_MENU
@@ -712,25 +695,25 @@ async def wrong_input_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     cs = len(context.user_data.get("photos", []))
     step = PHOTO_STEPS[cs] if cs < 6 else PHOTO_STEPS[5]
     await update.message.reply_text(
-        f"⚠️ أحتاج *صورة* مو نص!\n\n📸 *الصورة {step['num']} — {step['angle']}*\n{step['instruction']}",
+        f"أحتاج *صورة* مو نص ⚠️\n\nالصورة *{step['num']}* — {step['angle']} 📸\n{step['instruction']}",
         parse_mode="Markdown",
     )
     return PHOTO_1 + cs
 
 async def wrong_input_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    await update.message.reply_text("⚠️ أحتاج *اسمك* مو صورة!\n\n📝 *أرسل لي اسمك الكامل:*", parse_mode="Markdown")
+    await update.message.reply_text("أحتاج *اسمك* مو صورة ⚠️\n\nأرسل لي اسمك الكامل 📝", parse_mode="Markdown")
     return NAME
 
 async def wrong_input_phone(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    await update.message.reply_text("⚠️ أحتاج *رقم الجوال* مو صورة!\n\n📱 *أدخل رقم جوالك:*\nمثال: 0512345678", parse_mode="Markdown")
+    await update.message.reply_text("أحتاج *رقم الجوال* مو صورة ⚠️\n\nأدخل رقم جوالك 📱\nمثال: 0512345678", parse_mode="Markdown")
     return PHONE
 
 async def wrong_input_item(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    await update.message.reply_text("⚠️ أحتاج *اسم القطعة* مو صورة!\n\n📝 *اكتب اسم القطعة:*", parse_mode="Markdown")
+    await update.message.reply_text("أحتاج *اسم القطعة* مو صورة ⚠️\n\nاكتب اسم القطعة 📝", parse_mode="Markdown")
     return ITEM_NAME
 
 async def wrong_input_password(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    await update.message.reply_text("⚠️ أحتاج *كلمة السر* مو صورة!\n\n🔐 *أدخل كلمة السر:*", parse_mode="Markdown")
+    await update.message.reply_text("أحتاج *كلمة السر* مو صورة ⚠️\n\nأدخل كلمة السر 🔐", parse_mode="Markdown")
     return PASSWORD
 
 
@@ -813,7 +796,7 @@ async def export_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             caption=f"{exp['emoji']} {exp['caption']}",
         )
 
-    await update.message.reply_text("✅ تم التصدير!")
+    await update.message.reply_text("تم التصدير ✅")
 
 
 async def participants_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -844,12 +827,12 @@ async def item_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         iid = int(context.args[0])
     except ValueError:
-        await update.message.reply_text("❌ أرسل رقم صحيح.")
+        await update.message.reply_text("أرسل رقم صحيح ✖️")
         return
 
     item_data = db.table("items").select("item_name,item_type,status,story,created_at,participant_id").eq("id", iid).execute().data
     if not item_data:
-        await update.message.reply_text(f"❌ ما لقيت قطعة برقم {iid}")
+        await update.message.reply_text(f"ما لقيت قطعة برقم {iid} ✖️")
         return
     item = item_data[0]
     part_data = db.table("participants").select("name,telegram_username,phone").eq("id", item["participant_id"]).execute().data
@@ -872,7 +855,7 @@ async def item_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ══════════════════════════════════════════════════════════
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     log_activity(update.effective_user.id, "إلغاء")
-    await update.message.reply_text("تم الإلغاء ❌\nأرسل أي رسالة للبدء من جديد.", reply_markup=ReplyKeyboardRemove())
+    await update.message.reply_text("تم الإلغاء ✖️\nأرسل أي رسالة للبدء من جديد.", reply_markup=ReplyKeyboardRemove())
     return ConversationHandler.END
 
 
@@ -936,7 +919,6 @@ def main():
             STORY: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, get_story),
                 CallbackQueryHandler(ai_story_start_callback, pattern="^ai_help_story$"),
-                CallbackQueryHandler(skip_story_callback, pattern="^skip_story$"),
                 CommandHandler("menu", menu_command),
                 MessageHandler(filters.ALL & ~filters.COMMAND, wrong_input_story),
             ],
